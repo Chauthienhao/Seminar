@@ -1,11 +1,11 @@
 import { NavLink } from 'react-router-dom'
-import { ScanLine, Layers, Route as RouteIcon, Clock, MapPin, ArrowRight } from 'lucide-react'
+import { Search, Clock, MapPin, ArrowRight } from 'lucide-react'
 
 const STEPS = [
   {
     n: '01',
     title: 'Quét mã QR hiện vật',
-    desc: 'Tìm các thẻ QR được gắn cạnh tủ trưng bày hiện vật. Sử dụng Camera điện thoại hoặc chức năng Quét mã trên web để bắt đầu.',
+    desc: 'Tìm các thẻ QR được gắn cạnh tủ trưng bày hiện vật. Dùng camera trên ứng dụng di động (sắp ra mắt) để quét, hoặc tra cứu bằng mã trên website.',
   },
   {
     n: '02',
@@ -59,11 +59,11 @@ export default function Home() {
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
               <NavLink
-                to="/quet-ma-qr"
+                to="/tra-cuu-hien-vat"
                 className="flex items-center gap-2 rounded-full bg-maroon px-5 py-3 text-sm font-semibold text-cream transition-colors hover:bg-maroon-700"
               >
-                <ScanLine size={17} />
-                Bắt đầu tham quan ngay
+                <Search size={17} />
+                Tra cứu hiện vật ngay
               </NavLink>
               <NavLink
                 to="/bo-suu-tap"

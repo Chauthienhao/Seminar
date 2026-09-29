@@ -1,10 +1,10 @@
 import { useState } from 'react'
 import { NavLink } from 'react-router-dom'
-import { Menu, X, ScanLine } from 'lucide-react'
+import { Menu, X, Search } from 'lucide-react'
 
 const NAV_LINKS = [
   { to: '/', label: 'Trang chủ' },
-  { to: '/quet-ma-qr', label: 'Quét mã QR' },
+  { to: '/tra-cuu-hien-vat', label: 'Tra cứu hiện vật' },
   { to: '/hien-vat/an-dong-ta-quan-le-van-duyet', label: 'Chi tiết hiện vật' },
   { to: '/ban-do', label: 'Bản đồ tham quan' },
   { to: '/bo-suu-tap', label: 'Bộ sưu tập & Lộ trình' },
@@ -59,11 +59,11 @@ export default function Header() {
             {lang} / {lang === 'VI' ? 'EN' : 'VI'}
           </button>
           <NavLink
-            to="/quet-ma-qr"
+            to="/tra-cuu-hien-vat"
             className="flex items-center gap-2 rounded-full bg-maroon px-4 py-2 text-sm font-semibold text-cream transition-colors hover:bg-maroon-700"
           >
-            <ScanLine size={16} />
-            Quét tham quan
+            <Search size={16} />
+            Tra cứu hiện vật
           </NavLink>
         </div>
 
@@ -97,12 +97,12 @@ export default function Header() {
               </NavLink>
             ))}
             <NavLink
-              to="/quet-ma-qr"
+              to="/tra-cuu-hien-vat"
               onClick={() => setOpen(false)}
               className="mt-2 flex items-center justify-center gap-2 rounded-full bg-maroon px-4 py-2.5 text-sm font-semibold text-cream"
             >
-              <ScanLine size={16} />
-              Quét tham quan
+              <Search size={16} />
+              Tra cứu hiện vật
             </NavLink>
           </nav>
         </div>

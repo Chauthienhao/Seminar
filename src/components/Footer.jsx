@@ -27,7 +27,7 @@ export default function Footer() {
         <div>
           <h4 className="text-sm font-semibold uppercase tracking-wide text-cream">Hỗ trợ</h4>
           <ul className="mt-3 space-y-2 text-sm text-cream/70">
-            <li><NavLink to="/quet-ma-qr" className="hover:text-cream">Hướng dẫn quét mã</NavLink></li>
+            <li><NavLink to="/tra-cuu-hien-vat" className="hover:text-cream">Tra cứu hiện vật</NavLink></li>
             <li><a href="#faq" className="hover:text-cream">Câu hỏi thường gặp</a></li>
             <li><a href="#help" className="hover:text-cream">Giúp đỡ</a></li>
           </ul>
