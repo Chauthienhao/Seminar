@@ -1,24 +1,21 @@
-import os
 from sqlalchemy import create_engine
 from sqlalchemy.orm import declarative_base, sessionmaker
-from dotenv import load_dotenv
 
-# Tải biến môi trường từ file .env (nếu có)
-load_dotenv()
+from core.config import settings
 
-DB_USER = os.getenv("DB_USER", "root")
-DB_PASSWORD = os.getenv("DB_PASSWORD", "123456") # Đổi thành pass MySQL của bạn
-DB_HOST = os.getenv("DB_HOST", "localhost")
-DB_PORT = os.getenv("DB_PORT", "3306")
-DB_NAME = os.getenv("DB_NAME", "museum_audio_guide")
+engine = create_engine(
+    settings.database_url,
+    pool_pre_ping=True,   # tự kiểm tra kết nối "chết" trước khi dùng (tránh lỗi khi MySQL idle-timeout)
+    pool_recycle=3600,
+    echo=(settings.ENV == "development"),
+)
 
-SQLALCHEMY_DATABASE_URL = f"mysql+pymysql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
-
-engine = create_engine(SQLALCHEMY_DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
+
 def get_db():
+    """Dependency dùng trong FastAPI route: mở session, trả về, và luôn đóng lại sau khi xong request."""
     db = SessionLocal()
     try:
         yield db
