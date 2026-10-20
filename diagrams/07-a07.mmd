@@ -1,0 +1,10 @@
+flowchart TD
+  S((GET /api/admin/stats/top-played)) --> AUTH["Xác thực A06; lang mặc định vi; limit mặc định 10"]
+  AUTH --> SQL["PlayLogRepository: play_logs JOIN artifacts theo artifact_id"]
+  SQL --> TRANS["JOIN artifact_translations theo artifact_id và language_code=lang"]
+  TRANS --> GROUP["GROUP BY artifact_id và title"]
+  GROUP --> COUNT["COUNT play_logs.id = play_count; COALESCE SUM listen_duration = tổng giây"]
+  COUNT --> SORT["ORDER BY COUNT giảm dần; LIMIT"]
+  SORT --> OUT["Ánh xạ ArtifactPlayStat; 200 danh sách"]
+  OUT --> UI["CMS nhận cùng /me qua Promise.all; render A05"]
+  UI --> E((Kết thúc))

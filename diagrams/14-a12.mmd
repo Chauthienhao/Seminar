@@ -1,0 +1,26 @@
+flowchart TD
+  S((Bắt đầu triển khai)) --> GET["Lấy đúng commit; chuẩn bị Node.js, Python, MySQL tương thích"]
+  GET --> DB["Tạo DB và 7 bảng theo DB.sql trên database mới"]
+  DB --> ENV["Cấu hình DB_*, SECRET_KEY, ALGORITHM, token TTL, CORS_ORIGINS, ENV"]
+  ENV --> TTS["Nếu dùng fallback audio: bổ sung TTS server và public TTS_SERVICE_URL"]
+  TTS --> DEPS["Backend: tạo venv; pip install -r requirements.txt"]
+  DEPS --> ADMIN["Từ backend-thuyet-minh: python create_admin.py với thông tin tài khoản được chọn"]
+  ADMIN --> API["Chạy uvicorn main:app --port 8000; host bind tùy môi trường"]
+  API --> HEALTH["GET /api/health"]
+  HEALTH --> H{"status ok?"}
+  H -->|Không| FIX["Kiểm tra tiến trình, cấu hình, dependency và log; sửa rồi chạy lại"]
+  FIX --> API
+  H -->|Có| REAL["Đăng nhập và gọi /api/admin/me để xác minh đường DB/JWT"]
+  REAL --> DBOK{"Đọc/ghi DB và xác thực thành công?"}
+  DBOK -->|Không| FIX
+  DBOK -->|Có| MODE{"Môi trường"}
+  MODE -->|Local dev| DEV["Frontend: npm ci; npm run dev; Vite :5173 proxy API :8000"]
+  MODE -->|Production đề xuất| BUILD["npm ci; npm run build → dist/"]
+  BUILD --> HOST["Cấu hình static hosting, TLS, /api proxy, SPA fallback và network DB"]
+  DEV --> TEST["Kiểm tra CMS login/me/stats/logout; visitor API kiểm tra riêng bằng HTTP client"]
+  HOST --> TEST
+  TEST --> OK{"Kết quả đúng và nhánh lỗi phù hợp?"}
+  OK -->|Không| REPAIR["Sửa cấu hình/implementation; build hoặc restart phần thay đổi"]
+  REPAIR --> MODE
+  OK -->|Có| LIMIT["Ghi nhận visitor UI còn mock; TTS/media/mobile chỉ sẵn sàng nếu đã bổ sung"]
+  LIMIT --> E((Hoàn tất kiểm tra triển khai))

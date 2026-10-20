@@ -1,0 +1,35 @@
+flowchart TB
+  subgraph CLIENT["Thiết bị người dùng / máy phát triển"]
+    subgraph BROWSER["Execution environment: Web browser"]
+      SPA["React SPA: Home, Lookup, Detail, Map, Tours, Admin"]
+      SESSION["sessionStorage: museum_admin_token"]
+      MOCK["Dữ liệu mẫu khách + state UI trong JS"]
+      SPA --- SESSION
+      SPA --- MOCK
+    end
+  end
+  subgraph DEV["Máy phát triển — có thể trùng thiết bị client"]
+    VITE["Node.js / Vite :5173 — source JSX + Tailwind; proxy /api"]
+    subgraph PY["Python / Uvicorn :8000 — một tiến trình ứng dụng"]
+      API["FastAPI main:app; CORS; /api/health"]
+      ROUTERS["visitor router + admin router; Pydantic + JWT dependency"]
+      SERVICES["AudioService / MapService / AuthService"]
+      REPOS["Artifact / PlayLog / Room / Tour / User repositories"]
+      ORM["SQLAlchemy + PyMySQL; SessionLocal; pool_pre_ping; recycle 3600 s"]
+      CFG[".env + settings: DB, JWT, CORS, TTS_SERVICE_URL, ENV"]
+      API --> ROUTERS --> SERVICES --> REPOS --> ORM
+      CFG --- API
+    end
+    MYSQL[("MySQL :3306 mặc định; museum_audio_guide; 7 bảng")]
+  end
+  MEDIA["Ngoài hệ thống: images.unsplash.com — ảnh giao diện mẫu"]
+  TTS["Dự kiến: TTS service; mặc định localhost:8001; implementation chưa có"]
+  FILES["Dự kiến: host file thu sẵn; địa chỉ theo audio_url; chưa có cấu hình"]
+  SPA -->|"HTTP :5173 — tải module/assets; HMR khi dev"| VITE
+  SPA -->|"CMS fetch /api/admin/*; JSON; Bearer cho request bảo vệ"| VITE
+  VITE -->|"Proxy /api giữ nguyên path; HTTP localhost:8000"| API
+  ORM -->|"MySQL protocol TCP; DB_HOST/DB_PORT"| MYSQL
+  SPA -->|"HTTPS tải ảnh mẫu trực tiếp"| MEDIA
+  SERVICES -.->|"Chỉ ghép chuỗi URL TTS trong response; không gọi HTTP"| TTS
+  SPA -.->|"Tương lai: GET URL audio trực tiếp từ client"| TTS
+  SPA -.->|"Tương lai: GET URL file thu sẵn"| FILES

@@ -1,0 +1,15 @@
+flowchart TD
+  S((Client/API caller)) --> POST["POST /api/play-logs — công khai, không JWT"]
+  POST --> SCHEMA{"PlayLogCreate hợp lệ về kiểu và trường bắt buộc?"}
+  SCHEMA -->|Không| V["422"]
+  SCHEMA -->|Có| DB["Mở session; get Artifact theo artifact_id"]
+  DB --> FOUND{"Hiện vật tồn tại?"}
+  FOUND -->|Không| N["NotFoundError → 404"]
+  FOUND -->|Có| LOG["Sinh UUID; gán artifact_id, session_id, trigger_method, language_played, listen_duration"]
+  LOG --> INSERT["INSERT play_logs; played_at mặc định CSDL"]
+  INSERT --> COMMIT["commit + refresh"]
+  COMMIT --> RESP["201 Created: PlayLogOut"]
+  RESP --> CLOSE["Đóng session"]
+  N --> CLOSE
+  CLOSE --> E((Kết thúc))
+  V --> E

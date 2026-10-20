@@ -1,0 +1,19 @@
+flowchart TD
+  S((Bắt đầu _to_detail)) --> T{"Có bản dịch đúng language_code?"}
+  T -->|Có| MATCH["Chọn bản dịch đúng ngôn ngữ"]
+  T -->|Không| ANY{"Có ít nhất một bản dịch?"}
+  ANY -->|Không| NF["NotFoundError: chưa có nội dung thuyết minh"]
+  NF --> E404["Endpoint detail/lookup trả 404"]
+  ANY -->|Có| FIRST["Chọn translations đầu tiên; không bảo đảm đó là tiếng Việt"]
+  MATCH --> AUDIO{"audio_url có giá trị?"}
+  FIRST --> AUDIO
+  AUDIO -->|Có| REC["Giữ URL; audio_source = pre_recorded"]
+  AUDIO -->|Không| TXT["Lấy transcript, nếu rỗng lấy title; cắt tối đa 2000 ký tự"]
+  TXT --> ENC["URL encode văn bản bằng quote"]
+  ENC --> URL["Ghép TTS_SERVICE_URL + /synthesize?text=...&lang=ngôn ngữ bản dịch"]
+  URL --> SRC["audio_source = tts"]
+  SRC --> RESPONSE["Trả URL trong translation; không gọi HTTP và không ghi URL vào DB"]
+  REC --> RESPONSE
+  RESPONSE --> META["Kèm available_languages đã sort và thông tin phòng"]
+  META --> E((Kết thúc xử lý backend))
+  E404 --> E

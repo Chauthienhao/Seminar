@@ -1,0 +1,38 @@
+flowchart TD
+  S((Bắt đầu request)) --> REQ
+  subgraph HTTP["FastAPI — visitor.py + dependencies.py"]
+    REQ["GET /api/artifacts, /artifacts/lookup/qr_code hoặc /artifacts/id"]
+    REQ --> VALID{"Tham số đúng kiểu?"}
+    VALID -->|Không| E422["HTTP 422 từ FastAPI / Pydantic"]
+    VALID -->|Có| LNG["get_language: vi/en giữ nguyên; khác → vi"]
+    LNG --> OPEN["get_db: mở SessionLocal"]
+    OPEN --> KIND{"Endpoint nào?"}
+  end
+  subgraph SVC["AudioService + ArtifactRepository"]
+    KIND -->|Danh sách| SEARCH["JOIN translations; lọc language_code; q khớp QR hoặc title"]
+    SEARCH --> PAGE["ORDER BY title; offset skip; limit mặc định 20"]
+    PAGE --> SUM["Chuyển từng phần tử sang ArtifactSummary"]
+    KIND -->|QR| QR["get_by_qr_code: khớp qr_code"]
+    KIND -->|ID| ID["get_by_id: khớp id"]
+    QR --> FOUND{"Tìm được Artifact?"}
+    ID --> FOUND
+    FOUND -->|Không| NF["NotFoundError"]
+    FOUND -->|Có| DETAIL["_to_detail: chọn bản dịch + resolve URL audio — A03"]
+    DETAIL --> CONTENT{"Có bản dịch?"}
+    CONTENT -->|Không| NF
+    CONTENT -->|Có| OUT["ArtifactDetail: room, translation, available_languages và metadata"]
+  end
+  subgraph DB["MySQL"]
+    TABLES[("artifacts + artifact_translations + rooms")]
+  end
+  SEARCH -.-> TABLES
+  QR -.-> TABLES
+  ID -.-> TABLES
+  SUM --> OK["HTTP 200: danh sách, có thể rỗng"]
+  OUT --> OK2["HTTP 200: chi tiết một hiện vật"]
+  NF --> E404["Router đổi sang HTTP 404"]
+  OK --> CLOSE["Đóng DB session trong finally"]
+  OK2 --> CLOSE
+  E404 --> CLOSE
+  CLOSE --> E((Kết thúc))
+  E422 --> E

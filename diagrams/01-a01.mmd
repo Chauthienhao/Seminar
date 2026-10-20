@@ -1,0 +1,38 @@
+flowchart TD
+  S((Bắt đầu)) --> H["Mở website / — Home"]
+  H --> MENU{"Chọn chức năng"}
+  MENU -->|Tra cứu| L["/tra-cuu-hien-vat: đọc POPULAR_ARTIFACTS"]
+  L --> Q["Nhập từ khóa: trim + lowercase"]
+  Q --> R["useMemo lọc title hoặc code trong mảng mẫu"]
+  R --> HAS{"Có kết quả?"}
+  HAS -->|Không| EMPTY["Hiện thông báo không tìm thấy"]
+  EMPTY --> Q
+  HAS -->|Có| LIST["Hiện các NavLink"]
+  LIST --> ACT{"Chọn dòng hay submit?"}
+  ACT -->|Chọn dòng| NAV["Điều hướng /hien-vat/slug"]
+  ACT -->|Submit| BLANK{"query rỗng?"}
+  BLANK -->|Có| Q
+  BLANK -->|Không| EXACT{"code khớp chính xác?"}
+  EXACT -->|Có| NAV
+  EXACT -->|Không| RAW["Điều hướng id = encodeURIComponent của chuỗi nhập lowercase"]
+  RAW --> D
+  MENU -->|Chi tiết mẫu| D["ArtifactDetail: đọc hằng ARTIFACT; id chỉ để hiển thị"]
+  NAV --> D
+  D --> OPT{"Tương tác"}
+  OPT -->|Phát / Dừng| PLAY["Đảo playing; đổi icon — chưa phát audio"]
+  OPT -->|VI / EN| LANG["Đổi state lang — nội dung vẫn giữ nguyên"]
+  OPT -->|Yêu thích| LIKE["Đảo liked trong bộ nhớ component"]
+  OPT -->|Transcript| TEXT["Ẩn / hiện văn bản mẫu"]
+  OPT -->|Tiến, lùi, chia sẻ| INERT["Nút chưa gắn handler"]
+  PLAY --> OPT
+  LANG --> OPT
+  LIKE --> OPT
+  TEXT --> OPT
+  INERT --> OPT
+  MENU -->|Bản đồ| MAP["/ban-do: chọn tret hoặc lau1; render FLOORS và routePath mẫu"]
+  MAP --> MENU
+  MENU -->|Bộ sưu tập| TOUR["/bo-suu-tap: lọc TOURS theo tiêu đề và chủ đề"]
+  TOUR --> CLICK["Chọn tour: href #tour-id; chưa có trang tour chi tiết"]
+  CLICK --> MENU
+  OPT -->|Rời trang| END((Kết thúc))
+  MENU -->|Đóng trang| END

@@ -1,0 +1,24 @@
+flowchart TD
+  S((GET API visitor)) --> LANG["Chuẩn hóa lang khi endpoint có get_language; mở session"]
+  LANG --> TYPE{"Tài nguyên"}
+  TYPE -->|GET /api/rooms| ROOMS["RoomRepository.list_all: ORDER BY code"]
+  ROOMS --> RL["200 list RoomOut"]
+  TYPE -->|GET /api/rooms/id| ROOM["Tìm room và room.artifacts"]
+  ROOM --> RF{"Có room?"}
+  RF -->|Không| N["404"]
+  RF -->|Có| RA["Mỗi hiện vật: title đúng lang, nếu thiếu lấy bản đầu, nếu chưa có lấy qr_code"]
+  RA --> RD["200 RoomDetail kèm artifacts"]
+  TYPE -->|GET /api/tours| TL["TourRepository.list_all: offset 0, limit 50 nội bộ"]
+  TL --> TS["Chọn title/description vi hoặc en; stop_count=len stops"]
+  TS --> TO["200 list TourSummary"]
+  TYPE -->|GET /api/tours/id| TD["Tìm tour; eager load stops, artifact, translations, room"]
+  TD --> TF{"Có tour?"}
+  TF -->|Không| N
+  TF -->|Có| ORDER["Sort tour.stops theo step_order"]
+  ORDER --> STOP["Ánh xạ TourStop; title hiện vật fallback bản đầu hoặc qr_code"]
+  STOP --> DETAIL["200 TourDetail: summary + stops"]
+  RL --> E((Đóng session))
+  RD --> E
+  TO --> E
+  DETAIL --> E
+  N --> E

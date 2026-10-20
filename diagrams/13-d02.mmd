@@ -1,0 +1,12 @@
+flowchart TB
+  B["Browser khách / quản trị"] -->|HTTPS 443| EDGE["ĐỀ XUẤT: reverse proxy + TLS"]
+  EDGE -->|"/ + assets; SPA fallback index.html"| STATIC["ĐỀ XUẤT: static server chứa dist/ từ npm run build"]
+  EDGE -->|"/api/* giữ nguyên path"| API["FastAPI / Uvicorn; internal :8000"]
+  API -->|"SQLAlchemy / PyMySQL; private network :3306"| DB[("MySQL museum_audio_guide; persistent storage")]
+  B -.->|"Chưa nối UI: GET audio URL HTTPS công khai"| AUDIO["ĐỀ XUẤT: media host hoặc TTS qua TLS"]
+  AUDIO -.-> TTS["TTS implementation cần bổ sung; port nội bộ tùy cấu hình"]
+  AUDIO -.-> MEDIA["Kho file thu sẵn cần bổ sung"]
+  SECRET["ĐỀ XUẤT: biến môi trường / secret cho DB, JWT, CORS, public TTS URL"] -.-> API
+  BUILD["ĐỀ XUẤT: build frontend + cài backend dependencies; deploy thủ công hoặc pipeline mới"] -.-> STATIC
+  BUILD -.-> API
+  CHECK["ĐỀ XUẤT: kiểm tra /api/health và kiểm tra DB riêng"] -.-> API

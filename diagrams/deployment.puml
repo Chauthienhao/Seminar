@@ -1,0 +1,75 @@
+@startuml
+!pragma layout smetana
+title Museum Audio Guide — UML Deployment theo source\nCommit 8c484cdf93f5 — 20/10/2026
+skinparam componentStyle uml2
+skinparam shadowing false
+skinparam defaultFontName Arial
+skinparam defaultFontSize 14
+left to right direction
+
+node "Thiết bị người dùng\n(có thể cùng máy phát triển)" as client <<device>> {
+  node "Web Browser" as browser <<executionEnvironment>> {
+    artifact "React SPA\nHome / Lookup / Detail\nMap / Tours / CMS" as spa
+    artifact "sessionStorage\nmuseum_admin_token" as token
+    artifact "Dữ liệu mẫu khách\n+ state UI" as mock
+    spa -- token
+    spa -- mock
+  }
+}
+
+node "Môi trường local/dev\nVị trí máy vật lý chưa được khai báo" as dev {
+  node "Node.js / Vite\nTCP 5173" as vite <<executionEnvironment>> {
+    artifact "src/ + index.html\nReact 18 / Tailwind\nVite transform / HMR" as front
+    artifact "vite.config.js\n/api → localhost:8000" as proxy
+  }
+  node "Python / Uvicorn\nTCP 8000" as uvicorn <<executionEnvironment>> {
+    artifact "main:app\nFastAPI + CORS\n/api/health" as app
+    artifact "api/routers\nvisitor.py + admin.py\nPydantic / JWT dependencies" as routes
+    artifact "services\nAudioService\nMapService\nAuthService" as services
+    artifact "repositories\nArtifact / PlayLog\nRoom / Tour / User" as repos
+    artifact "core/database.py\nSQLAlchemy + PyMySQL\nSessionLocal / connection pool" as orm
+    artifact "core/config.py + .env\nDB_* / JWT / CORS\nTTS_SERVICE_URL / ENV" as config
+    app --> routes
+    routes --> services
+    services --> repos
+    repos --> orm
+    config ..> app
+  }
+  database "MySQL\nTCP 3306 mặc định" as mysql <<executionEnvironment>> {
+    artifact "museum_audio_guide\nrooms\nartifacts\nartifact_translations\ntours\ntour_artifacts\nplay_logs\nadmins" as schema
+  }
+}
+
+cloud "images.unsplash.com\nẢnh mẫu ngoài hệ thống" as images
+node "DỰ KIẾN: TTS service\nMặc định localhost:8001\nChưa có implementation" as tts <<external>> {
+  artifact "GET /synthesize\n?text=...&lang=..." as synth
+}
+node "DỰ KIẾN: media host\nĐịa chỉ theo audio_url\nChưa cấu hình" as media <<external>> {
+  artifact "File audio thu sẵn" as recorded
+}
+
+browser --> vite : HTTP :5173\nJS/CSS/assets + CMS /api/admin/*
+vite --> app : HTTP localhost:8000\nproxy /api, giữ nguyên path\nJSON + Bearer khi bảo vệ
+orm --> mysql : MySQL protocol / TCP\nDB_HOST + DB_PORT
+browser --> images : HTTPS\nGET ảnh mẫu
+services ..> synth : Chỉ ghép URL trong response\nKHÔNG gọi HTTP tới TTS
+browser ..> synth : TƯƠNG LAI: GET audio URL\nclient chưa tích hợp
+browser ..> recorded : TƯƠNG LAI: GET audio_url\nclient chưa tích hợp
+
+note bottom of browser
+  UI khách hiện chưa gọi visitor API;
+  playing chỉ đổi icon, không phát audio.
+  CMS đã gọi login, me và top-played.
+end note
+note bottom of uvicorn
+  Router, service và repository cùng backend;
+  không phải ba dịch vụ triển khai riêng.
+  /api/health chưa kiểm tra DB hoặc TTS.
+end note
+legend bottom
+  Đường liền: kết nối được cấu hình hoặc dùng trong code.
+  Đường đứt: quan hệ URL hoặc tích hợp tương lai, theo nhãn.
+  Đây là topology suy ra từ source, không phải xác minh máy chủ đang chạy.
+  Repo chưa có Docker, pipeline CI/CD hoặc manifest production.
+endlegend
+@enduml

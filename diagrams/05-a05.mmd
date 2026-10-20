@@ -1,0 +1,35 @@
+flowchart TD
+  S((Mở /admin)) --> TOKEN{"sessionStorage có museum_admin_token?"}
+  TOKEN -->|Không| FORM["Hiện LoginForm; username/password required"]
+  FORM --> SEND["Submit: loading=true; xóa lỗi; POST /api/admin/login"]
+  SEND --> P["Pydantic kiểm tra LoginRequest"]
+  P --> USER["AuthService → UserRepository tìm admins.username"]
+  USER --> AUTH{"Có user và bcrypt.checkpw đúng?"}
+  AUTH -->|Không| FAIL["401; UI hiện lỗi; loading=false"]
+  FAIL --> FORM
+  AUTH -->|Có| LAST["Cập nhật last_login UTC; commit + refresh"]
+  LAST --> JWT["Tạo JWT: sub=user.id; role; exp theo cấu hình, mặc định 120 phút; HS256 mặc định"]
+  JWT --> SAVE["200 access_token; lưu sessionStorage và setToken"]
+  SAVE --> DASH
+  TOKEN -->|Có, chưa xác minh| DASH["Mount Dashboard; loading=true"]
+  DASH --> FORK["Promise.all khởi chạy hai request độc lập"]
+  FORK --> ME["GET /api/admin/me + Bearer token — A06"]
+  FORK --> ST["GET /api/admin/stats/top-played?lang=vi&limit=5 + Bearer token — A07"]
+  ME --> JOIN{"Cả hai promise thành công?"}
+  ST --> JOIN
+  JOIN -->|Có| SET["setMe + setStats; finally loading=false"]
+  SET --> ROWS{"stats rỗng?"}
+  ROWS -->|Có| EMPTY["Hiện chưa có lượt phát"]
+  ROWS -->|Không| RENDER["Hiện top hiện vật, lượt phát, round tổng giây/60"]
+  JOIN -->|Không| CODE{"Response 401?"}
+  CODE -->|Có| CLEAR["adminRequest xóa token trong storage; throw lỗi hết phiên"]
+  CODE -->|Không| ERR["throw lỗi API hoặc mạng"]
+  CLEAR --> SHOW["Dashboard setError; loading=false; chưa tự setToken(null)"]
+  ERR --> SHOW
+  EMPTY --> ACTION
+  RENDER --> ACTION
+  SHOW --> ACTION{"Thao tác tiếp theo"}
+  ACTION -->|Đăng xuất| OUT["Xóa token + setToken(null)"]
+  OUT --> FORM
+  ACTION -->|Tải lại trang| TOKEN
+  ACTION -->|Đóng tab| E((Kết thúc))

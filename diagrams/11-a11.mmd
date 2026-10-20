@@ -1,0 +1,23 @@
+flowchart TD
+  S((Caller có lat/lng)) --> REQ["GET /api/map/nearby?lat=...&lng=...&lang=..."]
+  REQ --> VALID{"lat/lng parse được float?"}
+  VALID -->|Không| V["422"]
+  VALID -->|Có| LANG["Chuẩn hóa vi/en; mở session"]
+  LANG --> BOX["ArtifactRepository.find_nearby: lat/lng khác NULL; bounding box ±0.01 độ"]
+  BOX --> LIMIT["Lấy tối đa 50 candidates; eager load translations/room"]
+  LIMIT --> INIT["best=None; best_distance=None"]
+  INIT --> LOOP{"Còn candidate?"}
+  LOOP -->|Có| DIST["Tính Haversine với R=6.371.000 m"]
+  DIST --> IN{"distance ≤ geofence_radius hoặc mặc định 10 m?"}
+  IN -->|Không| LOOP
+  IN -->|Có| BETTER{"Chưa có best hoặc khoảng cách nhỏ hơn best_distance?"}
+  BETTER -->|Không| LOOP
+  BETTER -->|Có| UPDATE["Cập nhật best và best_distance"]
+  UPDATE --> LOOP
+  LOOP -->|Không| FOUND{"best khác None?"}
+  FOUND -->|Không| NULL["200 JSON null"]
+  FOUND -->|Có| TITLE["Chọn title đúng lang; fallback bản đầu; cuối cùng qr_code"]
+  TITLE --> RES["200 ArtifactSummary; chưa trả audio URL"]
+  RES --> END((Đóng session))
+  NULL --> END
+  V --> END

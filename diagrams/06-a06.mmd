@@ -1,0 +1,15 @@
+flowchart TD
+  S((Request /api/admin trừ login)) --> HDR{"Có HTTP Bearer credentials?"}
+  HDR -->|Không| M["401: thiếu token"]
+  HDR -->|Có| DEC["jwt.decode với SECRET_KEY và ALGORITHM; kiểm tra exp"]
+  DEC --> VALID{"Decode thành công và payload có sub?"}
+  VALID -->|Không| I["401: không hợp lệ hoặc hết hạn"]
+  VALID -->|Có| LOOK["UserRepository.get_by_id sub → admins"]
+  LOOK --> EX{"Tài khoản còn tồn tại?"}
+  EX -->|Không| N["401: tài khoản không tồn tại"]
+  EX -->|Có| U["UserOut.model_validate; tiếp tục endpoint"]
+  U --> OP["Đọc /me, thống kê hoặc ghi dữ liệu CMS"]
+  OP --> E((Trả response và đóng session))
+  M --> E
+  I --> E
+  N --> E

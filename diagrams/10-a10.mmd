@@ -1,0 +1,23 @@
+flowchart TD
+  S((Request CMS)) --> AUTH["A06 + validate payload"]
+  AUTH --> OP{"Thao tác"}
+  OP -->|POST /api/admin/rooms| R["UUID + code + name_vi + name_en"]
+  R --> RC["RoomRepository.create: commit + refresh"]
+  RC --> R201["201 RoomOut"]
+  OP -->|POST /api/admin/tours| T["UUID + title/description vi/en + duration + thumbnail"]
+  T --> TC["TourRepository.create: commit + refresh Tour"]
+  TC --> LOOP{"Còn artifact_id trong artifact_ids_in_order?"}
+  LOOP -->|Có| LINK["enumerate bắt đầu 1 → TourArtifact: tour_id, artifact_id, step_order"]
+  LINK --> LC["add_stop: commit + refresh từng điểm"]
+  LC --> LOOP
+  LOOP -->|Không| GET["get_tour với vi; sort step_order; dựng TourDetail"]
+  GET --> T201["201 TourDetail"]
+  OP -->|DELETE /api/admin/tours/id| FIND["Tìm tour"]
+  FIND --> HAS{"Có tour?"}
+  HAS -->|Không| N["404"]
+  HAS -->|Có| DEL["Xóa tour + tour_artifacts; commit; giữ nguyên artifacts"]
+  DEL --> D204["204 No Content"]
+  R201 --> E((Đóng session))
+  T201 --> E
+  N --> E
+  D204 --> E
