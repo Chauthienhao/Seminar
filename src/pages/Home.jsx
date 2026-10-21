@@ -1,5 +1,8 @@
+import { useEffect, useState } from 'react'
 import { NavLink } from 'react-router-dom'
-import { Search, Clock, MapPin, ArrowRight } from 'lucide-react'
+import { Search, Clock, MapPin, ArrowRight, Loader2 } from 'lucide-react'
+
+import { api } from '../lib/api.js'
 
 const STEPS = [
   {
@@ -19,28 +22,20 @@ const STEPS = [
   },
 ]
 
-const ARTIFACTS = [
-  {
-    slug: 'an-dong-ta-quan-le-van-duyet',
-    tag: 'Triều Nguyễn — thế kỷ 19',
-    title: 'Ấn đồng Tả quân Lê Văn Duyệt',
-    desc: 'Ấn chương hành chính quan trọng của Tổng trấn Gia Định Thành thời kỳ đầu thế kỷ 19.',
-  },
-  {
-    slug: 'ban-do-hoa-do-gia-dinh-thanh',
-    tag: 'Quy hoạch Sài Gòn — đầu thế kỷ 19',
-    title: 'Bản đồ họa đồ Gia Định Thành',
-    desc: 'Bản đồ khảo sát chi tiết thành Gia Định xưa, tư liệu quý về quy hoạch xưa của đô thị.',
-  },
-  {
-    slug: 'tranh-son-mai-sai-gon-gia-dinh',
-    tag: 'Nghệ thuật Nam Bộ',
-    title: 'Tranh sơn mài Sài Gòn — Gia Định',
-    desc: 'Bức tranh mô tả nhịp sống giao thương phồn hoa tại bến Bình Đông xưa.',
-  },
-]
-
 export default function Home() {
+  const [artifacts, setArtifacts] = useState([])
+  const [loadingArtifacts, setLoadingArtifacts] = useState(true)
+
+  // Tạm thời lấy 3 hiện vật đầu tiên từ API làm "nổi bật" — backend chưa có cờ
+  // is_featured riêng, có thể bổ sung cột này vào bảng `artifacts` sau nếu cần.
+  useEffect(() => {
+    api
+      .searchArtifacts(undefined, 'vi')
+      .then((list) => setArtifacts(list.slice(0, 3)))
+      .catch(() => setArtifacts([]))
+      .finally(() => setLoadingArtifacts(false))
+  }, [])
+
   return (
     <>
       {/* Hero */}
@@ -122,26 +117,40 @@ export default function Home() {
         </div>
 
         <div className="mt-8 grid gap-6 sm:grid-cols-3">
-          {ARTIFACTS.map((a) => (
-            <NavLink
-              key={a.slug}
-              to={`/hien-vat/${a.slug}`}
-              className="group overflow-hidden rounded-2xl border border-ink/10 bg-paper transition-shadow hover:shadow-md"
-            >
-              <div className="aspect-[4/3] overflow-hidden bg-sand">
-                <img
-                  src={`https://images.unsplash.com/photo-1594732832278-abd644401426?q=80&w=800&auto=format&fit=crop`}
-                  alt={a.title}
-                  className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-                />
-              </div>
-              <div className="p-5">
-                <p className="text-xs font-semibold uppercase tracking-wide text-maroon">{a.tag}</p>
-                <h3 className="mt-2 font-serif text-lg font-semibold">{a.title}</h3>
-                <p className="mt-2 text-sm leading-relaxed text-ink-soft">{a.desc}</p>
-              </div>
-            </NavLink>
-          ))}
+          {loadingArtifacts && (
+            <p className="col-span-3 flex items-center justify-center gap-2 py-10 text-sm text-ink-soft">
+              <Loader2 size={16} className="animate-spin" /> Đang tải hiện vật...
+            </p>
+          )}
+
+          {!loadingArtifacts && artifacts.length === 0 && (
+            <p className="col-span-3 rounded-2xl border border-dashed border-ink/15 p-8 text-center text-sm text-ink-soft">
+              Chưa có dữ liệu hiện vật. Hãy chạy <code>python -m scripts.seed_data</code> ở backend để tạo dữ liệu mẫu.
+            </p>
+          )}
+
+          {!loadingArtifacts &&
+            artifacts.map((a) => (
+              <NavLink
+                key={a.id}
+                to={`/hien-vat/${a.id}`}
+                className="group overflow-hidden rounded-2xl border border-ink/10 bg-paper transition-shadow hover:shadow-md"
+              >
+                <div className="aspect-[4/3] overflow-hidden bg-sand">
+                  {a.image_url && (
+                    <img
+                      src={a.image_url}
+                      alt={a.title}
+                      className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                    />
+                  )}
+                </div>
+                <div className="p-5">
+                  {a.period && <p className="text-xs font-semibold uppercase tracking-wide text-maroon">{a.period}</p>}
+                  <h3 className="mt-2 font-serif text-lg font-semibold">{a.title}</h3>
+                </div>
+              </NavLink>
+            ))}
         </div>
       </section>
 
