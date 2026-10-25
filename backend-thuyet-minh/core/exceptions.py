@@ -12,5 +12,9 @@ class ConflictError(Exception):
     """Vi phạm ràng buộc duy nhất, ví dụ trùng mã QR hoặc trùng username."""
 
 
+class InvalidDataError(Exception):
+    """Dữ liệu gửi lên sai nghiệp vụ, ví dụ ngôn ngữ chưa hỗ trợ hoặc tour trỏ tới hiện vật không tồn tại."""
+
+
 class InvalidCredentialsError(Exception):
     """Sai username/password khi đăng nhập CMS."""

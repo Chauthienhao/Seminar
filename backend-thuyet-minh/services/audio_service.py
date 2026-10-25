@@ -18,14 +18,18 @@ from urllib.parse import quote
 from sqlalchemy.orm import Session
 
 from core.config import settings
-from core.exceptions import ConflictError, NotFoundError
+from core.exceptions import ConflictError, InvalidDataError, NotFoundError
 from domain.entities import Artifact, ArtifactTranslation, PlayLog
 from domain.schemas import (
+    ArtifactAdminOut,
     ArtifactCreate,
     ArtifactDetail,
     ArtifactPlayStat,
     ArtifactSummary,
+    ArtifactTranslationAdminOut,
+    ArtifactTranslationIn,
     ArtifactTranslationOut,
+    ArtifactTranslationUpdate,
     ArtifactUpdate,
     PlayLogCreate,
     PlayLogOut,
@@ -134,7 +138,54 @@ class AudioService:
             raise NotFoundError(f"Không tìm thấy hiện vật id={artifact_id}")
         self.artifacts.delete(artifact)
 
+    def list_for_admin(self, query: str | None, skip: int = 0, limit: int = 50) -> list[ArtifactAdminOut]:
+        return [ArtifactAdminOut.model_validate(a) for a in self.artifacts.list_for_admin(query, skip, limit)]
+
+    def get_for_admin(self, artifact_id: str) -> ArtifactAdminOut:
+        artifact = self.artifacts.get_by_id(artifact_id)
+        if artifact is None:
+            raise NotFoundError(f"Không tìm thấy hiện vật id={artifact_id}")
+        return ArtifactAdminOut.model_validate(artifact)
+
+    # ---------- CMS: quản trị bản dịch (mỗi hiện vật tối đa 1 bản / ngôn ngữ) ----------
+
+    def add_translation(self, artifact_id: str, payload: ArtifactTranslationIn) -> ArtifactTranslationAdminOut:
+        if payload.language_code not in SUPPORTED_LANGUAGES:
+            raise InvalidDataError(f"Ngôn ngữ '{payload.language_code}' chưa được hỗ trợ")
+        if self.artifacts.get_by_id(artifact_id) is None:
+            raise NotFoundError(f"Không tìm thấy hiện vật id={artifact_id}")
+        if self.artifacts.get_translation(artifact_id, payload.language_code) is not None:
+            raise ConflictError(f"Hiện vật đã có bản dịch '{payload.language_code}', hãy sửa thay vì thêm mới")
+
+        translation = ArtifactTranslation(id=str(uuid.uuid4()), artifact_id=artifact_id, **payload.model_dump())
+        created = self.artifacts.add_translation(translation)
+        return ArtifactTranslationAdminOut.model_validate(created)
+
+    def update_translation(
+        self, artifact_id: str, language_code: str, payload: ArtifactTranslationUpdate
+    ) -> ArtifactTranslationAdminOut:
+        translation = self._get_translation_or_raise(artifact_id, language_code)
+        for field, value in payload.model_dump(exclude_unset=True).items():
+            setattr(translation, field, value)
+        updated = self.artifacts.update_translation(translation)
+        return ArtifactTranslationAdminOut.model_validate(updated)
+
+    def delete_translation(self, artifact_id: str, language_code: str) -> None:
+        translation = self._get_translation_or_raise(artifact_id, language_code)
+        artifact = self.artifacts.get_by_id(artifact_id)
+        # Hiện vật không còn bản dịch nào sẽ biến mất khỏi trang tra cứu và trang chi tiết
+        # báo lỗi, nên bắt buộc giữ lại ít nhất 1 bản.
+        if len(artifact.translations) <= 1:
+            raise InvalidDataError("Không thể xoá bản dịch cuối cùng của hiện vật")
+        self.artifacts.delete_translation(translation)
+
     # ---------- Nội bộ ----------
+
+    def _get_translation_or_raise(self, artifact_id: str, language_code: str) -> ArtifactTranslation:
+        translation = self.artifacts.get_translation(artifact_id, language_code)
+        if translation is None:
+            raise NotFoundError(f"Hiện vật id={artifact_id} chưa có bản dịch '{language_code}'")
+        return translation
 
     def _pick_translation(self, artifact: Artifact, language_code: str) -> ArtifactTranslation:
         for t in artifact.translations:
