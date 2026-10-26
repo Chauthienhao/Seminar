@@ -23,6 +23,12 @@ class RoomCreate(BaseModel):
     name_en: str
 
 
+class RoomUpdate(BaseModel):
+    code: str | None = None
+    name_vi: str | None = None
+    name_en: str | None = None
+
+
 # ---------- Artifact translation ----------
 
 class ArtifactTranslationIn(BaseModel):
@@ -37,6 +43,22 @@ class ArtifactTranslationOut(ArtifactTranslationIn):
     model_config = ConfigDict(from_attributes=True)
     id: str
     audio_source: str = "pre_recorded"  # 'pre_recorded' (file thu sẵn) | 'tts' (tổng hợp giọng nói lúc gọi API)
+
+
+class ArtifactTranslationUpdate(BaseModel):
+    """Sửa một bản dịch — ngôn ngữ nằm trên URL nên không cho đổi ở đây."""
+
+    title: str | None = None
+    transcript: str | None = None
+    audio_url: str | None = None
+    audio_duration: int | None = None
+
+
+class ArtifactTranslationAdminOut(ArtifactTranslationIn):
+    """Bản dịch dạng thô cho CMS — không resolve audio sang TTS như phía khách tham quan."""
+
+    model_config = ConfigDict(from_attributes=True)
+    id: str
 
 
 # ---------- Artifact ----------
@@ -92,6 +114,22 @@ class ArtifactDetail(BaseModel):
     available_languages: list[str]
 
 
+class ArtifactAdminOut(BaseModel):
+    """Hiện vật kèm TẤT CẢ bản dịch — dùng cho danh sách và form sửa trong CMS."""
+
+    model_config = ConfigDict(from_attributes=True)
+    id: str
+    qr_code: str
+    room_id: str | None = None
+    lat: float | None = None
+    lng: float | None = None
+    geofence_radius: int | None = None
+    image_url: str | None = None
+    period: str | None = None
+    room: RoomOut | None = None
+    translations: list[ArtifactTranslationAdminOut] = []
+
+
 # ---------- Tour ----------
 
 class TourCreate(BaseModel):
@@ -119,6 +157,30 @@ class TourStop(BaseModel):
 
 
 class TourDetail(TourSummary):
+    stops: list[TourStop]
+
+
+class TourUpdate(BaseModel):
+    title_vi: str | None = None
+    title_en: str | None = None
+    description_vi: str | None = None
+    description_en: str | None = None
+    duration_minutes: int | None = None
+    thumbnail_url: str | None = None
+    # None = giữ nguyên lộ trình; gửi list (kể cả list rỗng) = thay toàn bộ lộ trình theo thứ tự mới
+    artifact_ids_in_order: list[str] | None = None
+
+
+class TourAdminOut(BaseModel):
+    """Tour kèm cả tiêu đề/mô tả vi + en — dùng cho form sửa tour trong CMS."""
+
+    id: str
+    title_vi: str
+    title_en: str
+    description_vi: str | None = None
+    description_en: str | None = None
+    duration_minutes: int | None = None
+    thumbnail_url: str | None = None
     stops: list[TourStop]
 
 

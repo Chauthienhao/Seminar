@@ -71,6 +71,29 @@ class ArtifactRepository:
             .all()
         )
 
+    def list_for_admin(self, query: str | None, skip: int = 0, limit: int = 50) -> list[Artifact]:
+        """
+        Danh sách cho CMS: lấy CẢ hiện vật chưa có bản dịch nào (khác `search()` phía khách
+        tham quan vốn join bắt buộc với bản dịch), tìm theo mã QR hoặc tiêu đề ở mọi ngôn ngữ.
+        """
+        q = self.db.query(Artifact).options(joinedload(Artifact.translations), joinedload(Artifact.room))
+        if query:
+            like = f"%{query}%"
+            q = q.filter(
+                or_(
+                    Artifact.qr_code.ilike(like),
+                    Artifact.translations.any(ArtifactTranslation.title.ilike(like)),
+                )
+            )
+        return q.order_by(Artifact.qr_code).offset(skip).limit(limit).all()
+
+    def existing_ids(self, artifact_ids: list[str]) -> set[str]:
+        """Trả về những id trong danh sách thực sự tồn tại — dùng để kiểm tra lộ trình tour."""
+        if not artifact_ids:
+            return set()
+        rows = self.db.query(Artifact.id).filter(Artifact.id.in_(artifact_ids)).all()
+        return {row.id for row in rows}
+
     def create(self, artifact: Artifact) -> Artifact:
         self.db.add(artifact)
         self.db.commit()
@@ -91,6 +114,15 @@ class ArtifactRepository:
         self.db.commit()
         self.db.refresh(translation)
         return translation
+
+    def update_translation(self, translation: ArtifactTranslation) -> ArtifactTranslation:
+        self.db.commit()
+        self.db.refresh(translation)
+        return translation
+
+    def delete_translation(self, translation: ArtifactTranslation) -> None:
+        self.db.delete(translation)
+        self.db.commit()
 
     def get_translation(self, artifact_id: str, language_code: str) -> ArtifactTranslation | None:
         return (
