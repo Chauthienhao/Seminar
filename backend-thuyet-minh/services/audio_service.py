@@ -74,14 +74,14 @@ class AudioService:
             raise NotFoundError(f"Không tìm thấy hiện vật id={payload.artifact_id}")
 
         log = PlayLog(
-            id=str(uuid.uuid4()),
+            id=str(payload.id or uuid.uuid4()),
             artifact_id=payload.artifact_id,
             session_id=payload.session_id,
             trigger_method=payload.trigger_method,
             language_played=payload.language_played,
             listen_duration=payload.listen_duration,
         )
-        created = self.play_logs.create(log)
+        created = self.play_logs.save_snapshot(log)
         return PlayLogOut.model_validate(created)
 
     def top_played(self, language_code: str = "vi", limit: int = 10) -> list[ArtifactPlayStat]:

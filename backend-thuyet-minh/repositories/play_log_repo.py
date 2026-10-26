@@ -2,9 +2,11 @@
 Tầng truy xuất dữ liệu cho PlayLog — lịch sử phát thuyết minh, phục vụ CMS Analytics.
 Dùng bởi services/audio_service.py (ghi log khi phát) và api/routers/admin.py (xem thống kê).
 """
-from sqlalchemy import func
+from sqlalchemy import case, func
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from core.exceptions import ConflictError
 from domain.entities import Artifact, ArtifactTranslation, PlayLog
 
 
@@ -17,6 +19,34 @@ class PlayLogRepository:
         self.db.commit()
         self.db.refresh(log)
         return log
+
+    def save_snapshot(self, log: PlayLog) -> PlayLog:
+        """Reuse the existing PK; preserve start time and never decrease duration."""
+        existing = self.db.get(PlayLog, log.id)
+        if existing is None:
+            try:
+                return self.create(log)
+            except IntegrityError:
+                self.db.rollback()
+                # A concurrent start/checkpoint may have inserted the same ID.
+                existing = self.db.get(PlayLog, log.id)
+                if existing is None:
+                    raise
+        if (existing.session_id, existing.artifact_id, existing.language_played) != (
+            log.session_id, log.artifact_id, log.language_played
+        ):
+            raise ConflictError("Mã lượt nghe đã được sử dụng")
+        if log.listen_duration is not None:
+            self.db.query(PlayLog).filter(PlayLog.id == log.id).update({
+                PlayLog.listen_duration: case(
+                    (PlayLog.listen_duration.is_(None), log.listen_duration),
+                    (PlayLog.listen_duration < log.listen_duration, log.listen_duration),
+                    else_=PlayLog.listen_duration,
+                )
+            }, synchronize_session=False)
+            self.db.commit()
+            self.db.refresh(existing)
+        return existing
 
     def top_played_artifacts(self, language_code: str = "vi", limit: int = 10) -> list[dict]:
         """Top hiện vật được nghe nhiều nhất — dùng cho dashboard CMS."""

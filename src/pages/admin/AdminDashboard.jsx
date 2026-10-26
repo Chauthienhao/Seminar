@@ -152,8 +152,8 @@ function AdminLayout({ onLogout }) {
   }, [])
 
   return (
-    <div className="flex min-h-screen bg-cream">
-      <aside className="sticky top-0 flex h-screen w-60 shrink-0 flex-col bg-navy-800 text-cream">
+    <div className="flex min-h-screen flex-col bg-cream md:flex-row">
+      <aside className="flex w-full shrink-0 flex-col bg-navy-800 text-cream md:sticky md:top-0 md:h-screen md:w-60">
         <div className="flex items-center gap-2.5 border-b border-cream/10 px-5 py-5">
           <span className="flex h-9 w-9 items-center justify-center rounded-full bg-maroon font-serif font-semibold">M</span>
           <span className="leading-tight">
@@ -162,7 +162,7 @@ function AdminLayout({ onLogout }) {
           </span>
         </div>
 
-        <nav className="flex-1 space-y-1 px-3 py-4">
+        <nav className="flex flex-wrap gap-1 px-3 py-4 md:block md:flex-1 md:space-y-1">
           {NAV_ITEMS.map(({ to, label, icon: Icon, end }) => (
             <NavLink
               key={to}
@@ -197,7 +197,7 @@ function AdminLayout({ onLogout }) {
         </div>
       </aside>
 
-      <main className="min-w-0 flex-1 px-8 py-8">
+      <main className="min-w-0 flex-1 px-4 py-6 sm:px-8 sm:py-8">
         <Routes>
           <Route index element={<AdminOverview me={me} />} />
           <Route path="hien-vat" element={<ArtifactsAdmin />} />

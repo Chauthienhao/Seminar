@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 
 from api.dependencies import get_language
 from core.database import get_db
-from core.exceptions import NotFoundError
+from core.exceptions import ConflictError, NotFoundError
 from domain.schemas import (
     ArtifactDetail,
     ArtifactSummary,
@@ -60,11 +60,13 @@ def get_artifact(artifact_id: str, lang: str = Depends(get_language), db: Sessio
 
 @router.post("/play-logs", response_model=PlayLogOut, status_code=status.HTTP_201_CREATED)
 def log_play(payload: PlayLogCreate, db: Session = Depends(get_db)):
-    """Frontend gọi mỗi khi bắt đầu/kết thúc phát audio, phục vụ thống kê CMS."""
+    """Start/checkpoint/end reuse payload.id; one row per playback, no DB migration."""
     try:
         return AudioService(db).log_play(payload)
     except NotFoundError as e:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail=str(e))
+    except ConflictError as e:
+        raise HTTPException(status.HTTP_409_CONFLICT, detail=str(e))
 
 
 # ---------- Phòng & bản đồ ----------

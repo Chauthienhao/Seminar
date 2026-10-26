@@ -65,7 +65,7 @@ export const api = {
   getTour: (id, lang = 'vi') => request(withQuery(`/tours/${id}`, { lang })),
 
   // ---------- Ghi log lượt phát (Analytics) ----------
-  logPlay: (payload) => request('/play-logs', { method: 'POST', body: JSON.stringify(payload) }),
+  logPlay: (payload) => request('/play-logs', { method: 'POST', body: JSON.stringify(payload), keepalive: true }),
 }
 
 export { ApiError }

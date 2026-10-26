@@ -2,6 +2,9 @@
 Router CMS — quản trị hiện vật/tuyến tham quan/phòng, xem thống kê.
 Toàn bộ endpoint (trừ /admin/login) yêu cầu JWT hợp lệ qua `get_current_user`.
 """
+from datetime import date, timedelta
+from typing import Literal
+
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
@@ -9,6 +12,7 @@ from api.dependencies import get_current_user
 from core.database import get_db
 from core.exceptions import ConflictError, InvalidCredentialsError, InvalidDataError, NotFoundError
 from domain.schemas import (
+    AnalyticsDashboard,
     ArtifactAdminOut,
     ArtifactCreate,
     ArtifactDetail,
@@ -31,6 +35,7 @@ from domain.schemas import (
 from services.audio_service import AudioService
 from services.auth_service import AuthService
 from services.map_service import MapService
+from services.analytics_service import AnalyticsService
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
@@ -274,6 +279,20 @@ def delete_tour(
 
 
 # ---------- Thống kê ----------
+
+@router.get("/stats/dashboard", response_model=AnalyticsDashboard)
+def analytics_dashboard(
+    start_date: date | None = None,
+    end_date: date | None = None,
+    lang: Literal["vi", "en"] = "vi",
+    db: Session = Depends(get_db),
+    _: UserOut = Depends(get_current_user),
+):
+    end = end_date or date.today()
+    start = start_date or end - timedelta(days=29)
+    if start > end or (end - start).days > 365:
+        raise HTTPException(422, detail="Khoảng ngày phải theo thứ tự và không quá 366 ngày")
+    return AnalyticsService(db).dashboard(start, end, lang)
 
 @router.get("/stats/top-played", response_model=list[ArtifactPlayStat])
 def top_played_artifacts(

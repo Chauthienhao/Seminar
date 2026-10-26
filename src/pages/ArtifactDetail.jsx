@@ -4,6 +4,7 @@ import { Play, Pause, RotateCcw, RotateCw, Heart, Share2, ChevronDown, Loader2 }
 
 import { api, ApiError } from '../lib/api.js'
 import { getSessionId } from '../lib/session.js'
+import { createPlaybackTracker } from '../lib/playbackTracker.js'
 
 function formatTime(seconds) {
   if (!Number.isFinite(seconds)) return '0:00'
@@ -26,22 +27,54 @@ export default function ArtifactDetail() {
   const [playing, setPlaying] = useState(false)
   const [currentTime, setCurrentTime] = useState(0)
   const [duration, setDuration] = useState(0)
-  const hasLoggedPlay = useRef(false)
 
   // GET /api/artifacts/{id}?lang=vi — gọi lại mỗi khi đổi id (chuyển hiện vật) hoặc đổi ngôn ngữ
   useEffect(() => {
+    let cancelled = false
     setLoading(true)
     setError(null)
     setPlaying(false)
-    hasLoggedPlay.current = false
+    setCurrentTime(0)
+    setDuration(0)
     api
       .getArtifact(id, lang)
-      .then(setArtifact)
+      .then((data) => { if (!cancelled) setArtifact(data) })
       .catch((err) =>
-        setError(err instanceof ApiError && err.status === 404 ? 'not_found' : 'network')
+        !cancelled && setError(err instanceof ApiError && err.status === 404 ? 'not_found' : 'network')
       )
-      .finally(() => setLoading(false))
+      .finally(() => { if (!cancelled) setLoading(false) })
+    return () => { cancelled = true }
   }, [id, lang])
+
+  useEffect(() => {
+    const audio = audioRef.current
+    if (loading || !artifact || !audio) return
+    const tracker = createPlaybackTracker({
+      artifact_id: artifact.id,
+      session_id: getSessionId(),
+      trigger_method: 'MANUAL',
+      language_played: artifact.translation.language_code,
+    }, api.logPlay)
+    const resume = () => { if (!audio.paused && !audio.ended && audio.readyState >= 3) tracker.start() }
+    const events = {
+      playing: resume, seeked: resume,
+      waiting: tracker.suspend, seeking: tracker.suspend,
+      pause: tracker.stop, ended: tracker.finish, error: tracker.stop,
+    }
+    Object.entries(events).forEach(([event, handler]) => audio.addEventListener(event, handler))
+    const timer = setInterval(tracker.checkpoint, 15000)
+    const checkpoint = () => tracker.checkpoint()
+    window.addEventListener('pagehide', checkpoint)
+    document.addEventListener('visibilitychange', checkpoint)
+    return () => {
+      clearInterval(timer)
+      window.removeEventListener('pagehide', checkpoint)
+      document.removeEventListener('visibilitychange', checkpoint)
+      Object.entries(events).forEach(([event, handler]) => audio.removeEventListener(event, handler))
+      tracker.stop() // navigation, language change or unmount: flush the old POI
+      audio.pause()
+    }
+  }, [artifact, loading])
 
   const togglePlay = () => {
     const audioEl = audioRef.current
@@ -49,21 +82,7 @@ export default function ArtifactDetail() {
     if (playing) {
       audioEl.pause()
     } else {
-      audioEl.play()
-      // Ghi log lượt phát CHỈ MỘT LẦN cho mỗi lần tải trang (POST /api/play-logs)
-      if (!hasLoggedPlay.current && artifact) {
-        hasLoggedPlay.current = true
-        api
-          .logPlay({
-            artifact_id: artifact.id,
-            session_id: getSessionId(),
-            trigger_method: 'QR_SCAN',
-            language_played: lang,
-          })
-          .catch(() => {
-            /* Lỗi ghi log không nên chặn trải nghiệm nghe audio của khách */
-          })
-      }
+      audioEl.play().catch(() => setPlaying(false))
     }
   }
 

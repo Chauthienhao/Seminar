@@ -3,8 +3,9 @@ Pydantic schemas — định dạng dữ liệu vào/ra của API (tách biệt 
 Gộp chung 1 file cho gọn theo đúng cấu trúc thư mục domain/ đã chọn.
 """
 from datetime import datetime
+from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 
 # ---------- Room ----------
@@ -187,11 +188,12 @@ class TourAdminOut(BaseModel):
 # ---------- Play log / analytics ----------
 
 class PlayLogCreate(BaseModel):
+    id: UUID | None = None  # client-generated id makes retries/checkpoints idempotent
     artifact_id: str
-    session_id: str
-    trigger_method: str  # 'QR_SCAN' | 'GEOFENCE'
-    language_played: str
-    listen_duration: int | None = None
+    session_id: str = Field(min_length=1, max_length=100)
+    trigger_method: str = Field(min_length=1, max_length=50)  # QR_SCAN | GEOFENCE | MANUAL
+    language_played: str = Field(min_length=1, max_length=10)
+    listen_duration: int | None = Field(default=None, ge=0, le=86400)
 
 
 class PlayLogOut(BaseModel):
@@ -212,6 +214,58 @@ class ArtifactPlayStat(BaseModel):
     title: str
     play_count: int
     total_listen_seconds: int
+
+
+class PoiAnalytics(BaseModel):
+    artifact_id: str
+    title: str
+    play_count: int
+    measured_plays: int
+    average_listen_seconds: float | None
+    total_listen_seconds: int
+
+
+class DailyAnalytics(BaseModel):
+    day: str
+    language: str
+    play_count: int
+
+
+class LanguageAnalytics(BaseModel):
+    language: str
+    play_count: int
+
+
+class RouteStopAnalytics(BaseModel):
+    artifact_id: str
+    title: str
+
+
+class PopularRouteAnalytics(BaseModel):
+    stops: list[RouteStopAnalytics]
+    journey_count: int
+
+
+class RoomAnalytics(BaseModel):
+    room_id: str
+    code: str
+    name: str
+    play_count: int
+
+
+class AnalyticsDashboard(BaseModel):
+    start_date: str
+    end_date: str
+    timezone: str
+    total_plays: int
+    measured_plays: int
+    average_listen_seconds: float | None
+    unassigned_plays: int
+    pois: list[PoiAnalytics]
+    daily: list[DailyAnalytics]
+    languages: list[LanguageAnalytics]
+    popular_routes: list[PopularRouteAnalytics]
+    rooms: list[RoomAnalytics]
 
 
 # ---------- Auth (CMS) ----------

@@ -57,7 +57,7 @@ async function adminRequest(path, options = {}) {
   return res.json()
 }
 
-const json = (method, body) => ({ method, body: JSON.stringify(body) })
+const json = (method, body) => ({ method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
 
 export async function login(username, password) {
   const res = await fetch(`${ADMIN_API}/login`, json('POST', { username, password }))
@@ -72,6 +72,7 @@ export async function login(username, password) {
 export const adminApi = {
   me: () => adminRequest('/me'),
   topPlayed: (limit = 5, lang = 'vi') => adminRequest(`/stats/top-played?lang=${lang}&limit=${limit}`),
+  analytics: (filters = {}) => adminRequest(`/stats/dashboard?${new URLSearchParams(filters)}`),
 
   // ---------- Hiện vật ----------
   listArtifacts: (q = '', limit = 200) => {
