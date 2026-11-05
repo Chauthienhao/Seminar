@@ -2,7 +2,7 @@
 SQLAlchemy models — ánh xạ 1:1 với các bảng trong DB.sql ở thư mục gốc.
 Mọi thay đổi cấu trúc bảng phải sửa ở CẢ HAI nơi: DB.sql và file này.
 """
-from sqlalchemy import Column, String, Float, Integer, Text, ForeignKey, TIMESTAMP, func
+from sqlalchemy import Column, Double, String, Integer, Text, ForeignKey, TIMESTAMP, func
 from sqlalchemy.orm import relationship
 
 from core.database import Base
@@ -18,7 +18,9 @@ class Room(Base):
     name_vi = Column(String(255), nullable=False)
     name_en = Column(String(255), nullable=False)
 
-    artifacts = relationship("Artifact", back_populates="room")
+    # passive_deletes="all": không để ORM tự đặt room_id = NULL khi xoá phòng (cột này NOT NULL);
+    # luật chặn xoá phòng còn hiện vật nằm ở MapService.delete_room và khoá ngoại RESTRICT.
+    artifacts = relationship("Artifact", back_populates="room", passive_deletes="all")
 
 
 class Artifact(Base):
@@ -28,9 +30,9 @@ class Artifact(Base):
 
     id = Column(String(36), primary_key=True)
     qr_code = Column(String(50), unique=True, nullable=False, index=True)
-    room_id = Column(String(36), ForeignKey("rooms.id", ondelete="SET NULL"), nullable=True)
-    lat = Column(Float, nullable=True)
-    lng = Column(Float, nullable=True)
+    room_id = Column(String(36), ForeignKey("rooms.id", ondelete="RESTRICT"), nullable=False)
+    lat = Column(Double, nullable=True)
+    lng = Column(Double, nullable=True)
     geofence_radius = Column(Integer, default=10)
     image_url = Column(String(500), nullable=True)
     period = Column(String(100), nullable=True)

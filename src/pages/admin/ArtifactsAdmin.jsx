@@ -138,7 +138,7 @@ export default function ArtifactsAdmin() {
                     </button>
                   </td>
                   <td className="px-4 py-3 text-ink-soft">
-                    {a.room ? `${a.room.code} — ${a.room.name_vi}` : <span className="italic">Chưa xếp phòng</span>}
+                    {a.room ? `${a.room.code} — ${a.room.name_vi}` : '—'}
                   </td>
                   <td className="px-4 py-3 text-ink-soft">{a.period || '—'}</td>
                   <td className="px-4 py-3">
@@ -221,7 +221,7 @@ const generalFromArtifact = (a) => ({
 })
 
 const generalToPayload = (g) => ({
-  room_id: g.room_id || null,
+  room_id: g.room_id,
   period: toTextOrNull(g.period),
   image_url: toTextOrNull(g.image_url),
   lat: toNumberOrNull(g.lat),
@@ -236,9 +236,11 @@ function GeneralFields({ value, onChange, rooms, qrLocked }) {
       <Field label="Mã QR" required hint={qrLocked ? 'Mã QR không sửa được sau khi tạo.' : 'Mã in trên bảng QR, không trùng.'}>
         <input className={inputClass} value={value.qr_code} onChange={set('qr_code')} disabled={qrLocked} placeholder="VD: HV-101-01" />
       </Field>
-      <Field label="Phòng">
-        <select className={inputClass} value={value.room_id} onChange={set('room_id')}>
-          <option value="">— Chưa xếp phòng —</option>
+      <Field label="Phòng" required hint={rooms.length === 0 ? 'Chưa có phòng nào — hãy tạo phòng trước.' : undefined}>
+        <select required className={inputClass} value={value.room_id} onChange={set('room_id')}>
+          <option value="" disabled>
+            — Chọn phòng —
+          </option>
           {rooms.map((r) => (
             <option key={r.id} value={r.id}>
               {r.code} — {r.name_vi}
@@ -279,7 +281,7 @@ function CreateArtifactModal({ rooms, onClose, onCreated }) {
   const [saving, setSaving] = useState(false)
   const toast = useToast()
 
-  const valid = general.qr_code.trim() && vi.title.trim()
+  const valid = general.qr_code.trim() && general.room_id && vi.title.trim()
 
   const handleSubmit = async (e) => {
     e.preventDefault()

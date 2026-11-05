@@ -37,6 +37,7 @@ from domain.schemas import (
 )
 from repositories.artifact_repo import ArtifactRepository
 from repositories.play_log_repo import PlayLogRepository
+from repositories.room_repo import RoomRepository
 
 SUPPORTED_LANGUAGES = ("vi", "en")
 
@@ -46,6 +47,7 @@ class AudioService:
         self.db = db
         self.artifacts = ArtifactRepository(db)
         self.play_logs = PlayLogRepository(db)
+        self.rooms = RoomRepository(db)
 
     # ---------- Đọc dữ liệu cho khách tham quan ----------
 
@@ -93,6 +95,7 @@ class AudioService:
     def create_artifact(self, payload: ArtifactCreate) -> ArtifactDetail:
         if self.artifacts.get_by_qr_code(payload.qr_code) is not None:
             raise ConflictError(f"Mã QR '{payload.qr_code}' đã tồn tại")
+        self._validate_room(payload.room_id)
 
         artifact = Artifact(
             id=str(uuid.uuid4()),
@@ -126,7 +129,11 @@ class AudioService:
         if artifact is None:
             raise NotFoundError(f"Không tìm thấy hiện vật id={artifact_id}")
 
-        for field, value in payload.model_dump(exclude_unset=True).items():
+        fields = payload.model_dump(exclude_unset=True)
+        if "room_id" in fields:
+            self._validate_room(fields["room_id"])
+
+        for field, value in fields.items():
             setattr(artifact, field, value)
 
         updated = self.artifacts.update(artifact)
@@ -180,6 +187,13 @@ class AudioService:
         self.artifacts.delete_translation(translation)
 
     # ---------- Nội bộ ----------
+
+    def _validate_room(self, room_id: str | None) -> None:
+        """Mỗi hiện vật bắt buộc thuộc một phòng đang tồn tại (artifacts.room_id NOT NULL + khoá ngoại)."""
+        if not room_id:
+            raise InvalidDataError("Hiện vật bắt buộc phải thuộc một phòng")
+        if self.rooms.get_by_id(room_id) is None:
+            raise InvalidDataError(f"Không tìm thấy phòng id={room_id}")
 
     def _get_translation_or_raise(self, artifact_id: str, language_code: str) -> ArtifactTranslation:
         translation = self.artifacts.get_translation(artifact_id, language_code)

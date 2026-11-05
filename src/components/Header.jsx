@@ -5,7 +5,6 @@ import { Menu, X, Search } from 'lucide-react'
 const NAV_LINKS = [
   { to: '/', label: 'Trang chủ' },
   { to: '/tra-cuu-hien-vat', label: 'Tra cứu hiện vật' },
-  { to: '/hien-vat/an-dong-ta-quan-le-van-duyet', label: 'Chi tiết hiện vật' },
   { to: '/ban-do', label: 'Bản đồ tham quan' },
   { to: '/bo-suu-tap', label: 'Bộ sưu tập & Lộ trình' },
 ]

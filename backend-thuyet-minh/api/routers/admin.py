@@ -86,6 +86,8 @@ def create_artifact(
         return AudioService(db).create_artifact(payload)
     except ConflictError as e:
         raise HTTPException(status.HTTP_409_CONFLICT, detail=str(e))
+    except InvalidDataError as e:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 
 @router.put("/artifacts/{artifact_id}", response_model=ArtifactDetail)
@@ -99,6 +101,8 @@ def update_artifact(
         return AudioService(db).update_artifact(artifact_id, payload)
     except NotFoundError as e:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail=str(e))
+    except InvalidDataError as e:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 
 @router.delete("/artifacts/{artifact_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -200,11 +204,13 @@ def delete_room(
     db: Session = Depends(get_db),
     _: UserOut = Depends(get_current_user),
 ):
-    """Hiện vật trong phòng không bị xoá, chỉ chuyển sang trạng thái chưa xếp phòng."""
+    """Phòng còn hiện vật sẽ bị từ chối (409) — phải chuyển hoặc xoá hết hiện vật trước."""
     try:
         MapService(db).delete_room(room_id)
     except NotFoundError as e:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail=str(e))
+    except ConflictError as e:
+        raise HTTPException(status.HTTP_409_CONFLICT, detail=str(e))
 
 
 # ---------- Quản trị tuyến tham quan ----------

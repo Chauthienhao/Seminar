@@ -125,7 +125,7 @@ export default function Home() {
 
           {!loadingArtifacts && artifacts.length === 0 && (
             <p className="col-span-3 rounded-2xl border border-dashed border-ink/15 p-8 text-center text-sm text-ink-soft">
-              Chưa có dữ liệu hiện vật. Hãy chạy <code>python -m scripts.seed_data</code> ở backend để tạo dữ liệu mẫu.
+              Chưa có dữ liệu hiện vật. Hãy chạy <code>DB.sql</code> rồi <code>seed_data.sql</code> để tạo dữ liệu mẫu.
             </p>
           )}
 

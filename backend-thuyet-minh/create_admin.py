@@ -8,9 +8,12 @@ Dùng khi nào:
     'REPLACE_WITH_REAL_BCRYPT_HASH' (chạy script này để GHI ĐÈ bằng hash thật).
   - Quên mật khẩu / muốn đổi mật khẩu một tài khoản đã có.
 
-Cách chạy (trong thư mục backend-thuyet-minh, đã kích hoạt venv):
-  python -m scripts.create_admin
-  python -m scripts.create_admin --username admin --password "MatKhauMoi123"
+Chạy SAU khi đã chạy DB.sql — nếu chưa có bảng, script sẽ tự tạo bảng theo entities.py
+(thiếu các cột bản đồ), khiến DB.sql báo lỗi bảng đã tồn tại.
+
+Cách chạy (trong thư mục backend-thuyet-minh, đã kích hoạt venv nếu có):
+  python create_admin.py
+  python create_admin.py --username admin --password "MatKhauMoi123"
 """
 import argparse
 import uuid

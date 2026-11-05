@@ -72,12 +72,13 @@ export default function RoomsAdmin() {
 
   const handleDelete = async (room) => {
     const count = artifactCountByRoom[room.id] || 0
+    if (count > 0) {
+      toast.error(`Không thể xoá phòng ${room.code}: còn ${count} hiện vật. Hãy chuyển hoặc xoá các hiện vật này trước.`)
+      return
+    }
     const ok = await confirm({
       title: `Xoá phòng ${room.code} — ${room.name_vi}?`,
-      message:
-        count > 0
-          ? `Có ${count} hiện vật trong phòng này sẽ chuyển sang trạng thái chưa xếp phòng (hiện vật không bị xoá).`
-          : 'Phòng này chưa có hiện vật nào.',
+      message: 'Phòng này chưa có hiện vật nào.',
     })
     if (!ok) return
     try {

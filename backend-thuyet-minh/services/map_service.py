@@ -81,10 +81,15 @@ class MapService:
         return RoomOut.model_validate(self.rooms.update(room))
 
     def delete_room(self, room_id: str) -> None:
-        """Hiện vật trong phòng KHÔNG bị xoá theo, chỉ chuyển sang trạng thái chưa xếp phòng (room_id = NULL)."""
+        """Chỉ xoá được phòng trống; phòng còn hiện vật phải chuyển hoặc xoá hết hiện vật trước."""
         room = self.rooms.get_by_id(room_id)
         if room is None:
             raise NotFoundError(f"Không tìm thấy phòng id={room_id}")
+        if room.artifacts:
+            raise ConflictError(
+                f"Không thể xoá phòng {room.code}: còn {len(room.artifacts)} hiện vật. "
+                "Hãy chuyển hoặc xoá các hiện vật này trước."
+            )
         self.rooms.delete(room)
 
     # ---------- Tours ----------

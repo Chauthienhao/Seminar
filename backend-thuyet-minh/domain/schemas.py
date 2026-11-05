@@ -65,7 +65,7 @@ class ArtifactTranslationAdminOut(ArtifactTranslationIn):
 
 class ArtifactCreate(BaseModel):
     qr_code: str
-    room_id: str | None = None
+    room_id: str
     lat: float | None = None
     lng: float | None = None
     geofence_radius: int = 10
@@ -75,7 +75,7 @@ class ArtifactCreate(BaseModel):
 
 
 class ArtifactUpdate(BaseModel):
-    room_id: str | None = None
+    room_id: str | None = None  # bỏ trống = giữ phòng cũ; gửi null tường minh sẽ bị từ chối
     lat: float | None = None
     lng: float | None = None
     geofence_radius: int | None = None
