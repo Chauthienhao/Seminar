@@ -27,10 +27,12 @@ function formatDetail(detail, fallback) {
 
 async function adminRequest(path, options = {}) {
   const token = getToken()
+  // Gửi file (FormData) thì để trình duyệt tự đặt Content-Type kèm boundary
+  const isFormData = options.body instanceof FormData
   const res = await fetch(`${ADMIN_API}${path}`, {
     ...options,
     headers: {
-      'Content-Type': 'application/json',
+      ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...(options.headers || {}),
     },
@@ -86,6 +88,13 @@ export const adminApi = {
   createArtifact: (payload) => adminRequest('/artifacts', json('POST', payload)),
   updateArtifact: (id, payload) => adminRequest(`/artifacts/${id}`, json('PUT', payload)),
   deleteArtifact: (id) => adminRequest(`/artifacts/${id}`, { method: 'DELETE' }),
+
+  // Tải ảnh lên -> trả về { url: '/uploads/artifacts/...' } để điền vào image_url
+  uploadImage: (file) => {
+    const form = new FormData()
+    form.append('file', file)
+    return adminRequest('/uploads/image', { method: 'POST', body: form })
+  },
 
   // ---------- Bản dịch ----------
   addTranslation: (artifactId, payload) =>

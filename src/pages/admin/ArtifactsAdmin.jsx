@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { ExternalLink, Loader2, Pencil, Plus, QrCode, Search, Square, Trash2, Volume2 } from 'lucide-react'
+import { ExternalLink, Loader2, Pencil, Plus, QrCode, Search, Square, Trash2, Upload, Volume2 } from 'lucide-react'
 
 import { api } from '../../lib/api.js'
 import { adminApi } from '../../lib/adminApi.js'
@@ -246,6 +246,81 @@ const generalToPayload = (g) => ({
 // Ghim của các hiện vật khác, hiện mờ trên bản đồ chọn vị trí để dễ canh chỗ
 const loadMapArtifacts = () => api.listArtifactPositions('vi')
 
+const MAX_IMAGE_MB = 5 // khớp MAX_IMAGE_BYTES ở backend (services/upload_service.py)
+
+/**
+ * Ảnh minh hoạ: bấm "Tải ảnh" -> file được lưu vào backend-thuyet-minh/uploads/artifacts/,
+ * ô bên cạnh tự điền đường dẫn /uploads/artifacts/... ; bấm Lưu thì DB lưu đường dẫn đó.
+ * Vẫn có thể dán link ảnh trên mạng (https://...) vào ô như trước.
+ * (Không dùng <Field>: nó là thẻ <label>, không lồng được nút chọn file vào trong.)
+ */
+function ImageField({ value, onChange }) {
+  const [uploading, setUploading] = useState(false)
+  const toast = useToast()
+
+  const handleFile = async (file) => {
+    if (!file) return
+    if (file.size > MAX_IMAGE_MB * 1024 * 1024) {
+      toast.error(`Ảnh quá lớn, tối đa ${MAX_IMAGE_MB}MB`)
+      return
+    }
+    setUploading(true)
+    try {
+      const { url } = await adminApi.uploadImage(file)
+      onChange(url)
+      toast.success('Đã tải ảnh lên. Bấm Lưu để lưu vào hiện vật.')
+    } catch (err) {
+      toast.error(err.message)
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  return (
+    <div>
+      <span className="mb-1 block text-xs font-semibold text-ink">Ảnh minh hoạ</span>
+      <div className="flex gap-2">
+        <input
+          className={inputClass}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder="Tải ảnh lên hoặc dán link https://..."
+        />
+        <label className="inline-flex shrink-0 cursor-pointer items-center gap-1.5 rounded-full border border-ink/15 bg-paper px-3 py-2 text-sm font-semibold text-ink hover:border-maroon hover:text-maroon">
+          {uploading ? <Loader2 size={14} className="animate-spin" /> : <Upload size={14} />}
+          Tải ảnh
+          <input
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            className="sr-only"
+            disabled={uploading}
+            onChange={(e) => {
+              handleFile(e.target.files?.[0])
+              e.target.value = '' // cho phép chọn lại cùng một file
+            }}
+          />
+        </label>
+      </div>
+      {value ? (
+        <div className="mt-2 flex items-start gap-3">
+          <img
+            key={value}
+            src={value}
+            alt="Ảnh xem trước"
+            className="h-20 w-20 rounded-lg border border-ink/10 bg-sand/40 object-cover"
+            onError={(e) => (e.currentTarget.style.visibility = 'hidden')}
+          />
+          <button type="button" onClick={() => onChange('')} className="text-xs font-semibold text-maroon hover:underline">
+            Bỏ ảnh
+          </button>
+        </div>
+      ) : (
+        <span className="mt-1 block text-xs text-ink-soft">JPG, PNG hoặc WEBP, tối đa {MAX_IMAGE_MB}MB.</span>
+      )}
+    </div>
+  )
+}
+
 function GeneralFields({ value, onChange, rooms, qrLocked, artifactId = null }) {
   const set = (field) => (e) => onChange({ ...value, [field]: e.target.value })
   return (
@@ -268,9 +343,7 @@ function GeneralFields({ value, onChange, rooms, qrLocked, artifactId = null }) 
       <Field label="Thời kỳ">
         <input className={inputClass} value={value.period} onChange={set('period')} placeholder="VD: Thế kỷ XIX" />
       </Field>
-      <Field label="Link ảnh minh hoạ">
-        <input className={inputClass} value={value.image_url} onChange={set('image_url')} placeholder="https://..." />
-      </Field>
+      <ImageField value={value.image_url} onChange={(url) => onChange({ ...value, image_url: url })} />
       {/* Không bọc trong <Field>/<label>: bấm vào bản đồ trong label sẽ kích hoạt nút/ô nhập bên trong */}
       <div className="sm:col-span-2">
         <span className="mb-1 block text-xs font-semibold text-ink">Vị trí trên bản đồ</span>

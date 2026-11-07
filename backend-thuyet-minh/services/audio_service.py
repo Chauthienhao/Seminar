@@ -38,6 +38,7 @@ from domain.schemas import (
 from repositories.artifact_repo import ArtifactRepository
 from repositories.play_log_repo import PlayLogRepository
 from repositories.room_repo import RoomRepository
+from services.upload_service import delete_uploaded_file
 
 SUPPORTED_LANGUAGES = ("vi", "en")
 
@@ -133,17 +134,23 @@ class AudioService:
         if "room_id" in fields:
             self._validate_room(fields["room_id"])
 
+        old_image_url = artifact.image_url
         for field, value in fields.items():
             setattr(artifact, field, value)
 
         updated = self.artifacts.update(artifact)
+        # Đổi/xoá ảnh -> xoá file ảnh cũ đã upload (sau khi lưu DB thành công)
+        if "image_url" in fields and fields["image_url"] != old_image_url:
+            delete_uploaded_file(old_image_url)
         return self._to_detail(updated, "vi")
 
     def delete_artifact(self, artifact_id: str) -> None:
         artifact = self.artifacts.get_by_id(artifact_id)
         if artifact is None:
             raise NotFoundError(f"Không tìm thấy hiện vật id={artifact_id}")
+        image_url = artifact.image_url
         self.artifacts.delete(artifact)
+        delete_uploaded_file(image_url)  # xoá luôn file ảnh đã upload của hiện vật
 
     def list_for_admin(self, query: str | None, skip: int = 0, limit: int = 50) -> list[ArtifactAdminOut]:
         return [ArtifactAdminOut.model_validate(a) for a in self.artifacts.list_for_admin(query, skip, limit)]

@@ -2,7 +2,7 @@
 Router CMS — quản trị hiện vật/tuyến tham quan/phòng, xem thống kê.
 Toàn bộ endpoint (trừ /admin/login) yêu cầu JWT hợp lệ qua `get_current_user`.
 """
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
 from sqlalchemy.orm import Session
 
 from api.dependencies import get_current_user
@@ -31,6 +31,7 @@ from domain.schemas import (
 from services.audio_service import AudioService
 from services.auth_service import AuthService
 from services.map_service import MapService
+from services.upload_service import MAX_IMAGE_BYTES, save_artifact_image
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
@@ -115,6 +116,25 @@ def delete_artifact(
         AudioService(db).delete_artifact(artifact_id)
     except NotFoundError as e:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail=str(e))
+
+
+# ---------- Tải ảnh hiện vật ----------
+
+@router.post("/uploads/image", status_code=status.HTTP_201_CREATED)
+def upload_artifact_image(
+    file: UploadFile = File(...),
+    _: UserOut = Depends(get_current_user),
+):
+    """
+    Nhận 1 file ảnh, lưu vào backend-thuyet-minh/uploads/artifacts/ và trả về đường dẫn,
+    VD {"url": "/uploads/artifacts/3f9c...e1.jpg"}. Form hiện vật điền đường dẫn này vào
+    image_url rồi lưu như bình thường — DB chỉ lưu đường dẫn, không lưu file.
+    """
+    data = file.file.read(MAX_IMAGE_BYTES + 1)  # đọc dư 1 byte để biết file có vượt giới hạn không
+    try:
+        return {"url": save_artifact_image(data)}
+    except InvalidDataError as e:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 
 # ---------- Quản trị bản dịch của hiện vật ----------

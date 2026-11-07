@@ -3,3 +3,5 @@ dist
 .env
 .DS_Store
 __pycache__
+# Ảnh admin tải lên là dữ liệu, không phải code (sao lưu cùng database)
+backend-thuyet-minh/uploads/
