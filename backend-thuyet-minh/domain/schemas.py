@@ -202,7 +202,7 @@ class TourAdminOut(BaseModel):
 class PlayLogCreate(BaseModel):
     artifact_id: str
     session_id: str
-    trigger_method: str  # 'QR_SCAN' | 'GEOFENCE'
+    trigger_method: str  # 'QR_SCAN' | 'GEOFENCE' | 'MANUAL'
     language_played: str
     listen_duration: int | None = None
 

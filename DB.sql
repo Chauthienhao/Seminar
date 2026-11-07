@@ -100,7 +100,7 @@ CREATE TABLE play_logs (
     id VARCHAR(36) PRIMARY KEY,
     artifact_id VARCHAR(36),
     session_id VARCHAR(100) NOT NULL, -- ID ẩn danh của thiết bị
-    trigger_method VARCHAR(50) NOT NULL, -- 'QR_SCAN' hoặc 'GEOFENCE'
+    trigger_method VARCHAR(50) NOT NULL, -- 'QR_SCAN' | 'GEOFENCE' | 'MANUAL' (mở từ tìm kiếm/bản đồ/tour)
     language_played VARCHAR(10) NOT NULL,
     played_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     listen_duration INT, -- Số giây đã nghe

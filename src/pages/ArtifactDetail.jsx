@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { useParams, NavLink } from 'react-router-dom'
+import { useParams, useSearchParams, NavLink } from 'react-router-dom'
 import { Play, Pause, RotateCcw, RotateCw, Heart, Share2, ChevronDown, Loader2 } from 'lucide-react'
 
 import { api, ApiError } from '../lib/api.js'
@@ -14,6 +14,8 @@ function formatTime(seconds) {
 
 export default function ArtifactDetail() {
   const { id } = useParams()
+  const [searchParams] = useSearchParams()
+  const fromQr = searchParams.get('src') === 'qr'
   const [lang, setLang] = useState('vi')
   const [artifact, setArtifact] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -57,7 +59,8 @@ export default function ArtifactDetail() {
           .logPlay({
             artifact_id: artifact.id,
             session_id: getSessionId(),
-            trigger_method: 'QR_SCAN',
+            // ?src=qr do trang /q/:code (link trong mã QR) gắn vào; vào từ tìm kiếm/bản đồ/tour là MANUAL
+            trigger_method: fromQr ? 'QR_SCAN' : 'MANUAL',
             language_played: lang,
           })
           .catch(() => {

@@ -105,7 +105,7 @@ class PlayLog(Base):
     id = Column(String(36), primary_key=True)
     artifact_id = Column(String(36), ForeignKey("artifacts.id", ondelete="SET NULL"), nullable=True)
     session_id = Column(String(100), nullable=False)  # ID ẩn danh của thiết bị
-    trigger_method = Column(String(50), nullable=False)  # 'QR_SCAN' hoặc 'GEOFENCE'
+    trigger_method = Column(String(50), nullable=False)  # 'QR_SCAN' | 'GEOFENCE' | 'MANUAL' (mở từ tìm kiếm/bản đồ/tour)
     language_played = Column(String(10), nullable=False)
     played_at = Column(TIMESTAMP, server_default=func.now())
     listen_duration = Column(Integer, nullable=True)  # số giây đã nghe

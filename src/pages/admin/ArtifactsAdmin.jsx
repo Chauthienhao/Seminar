@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { ExternalLink, Loader2, Pencil, Plus, Search, Square, Trash2, Volume2 } from 'lucide-react'
+import { ExternalLink, Loader2, Pencil, Plus, QrCode, Search, Square, Trash2, Volume2 } from 'lucide-react'
 
 import { api } from '../../lib/api.js'
 import { adminApi } from '../../lib/adminApi.js'
 import LocationPicker from '../../components/map/LocationPicker.jsx'
 import Modal from './components/Modal.jsx'
+import QrPrintModal from './components/QrPrintModal.jsx'
 import { useConfirm, useToast } from './components/Feedback.jsx'
 import {
   Button,
@@ -38,6 +39,7 @@ export default function ArtifactsAdmin() {
   const [error, setError] = useState(null)
   const [creating, setCreating] = useState(false)
   const [editingId, setEditingId] = useState(null)
+  const [qrArtifact, setQrArtifact] = useState(null) // hiện vật đang mở modal In mã QR
   const toast = useToast()
   const confirm = useConfirm()
 
@@ -113,7 +115,7 @@ export default function ArtifactsAdmin() {
               <th className="px-4 py-3 font-semibold">Phòng</th>
               <th className="px-4 py-3 font-semibold">Thời kỳ</th>
               <th className="px-4 py-3 font-semibold">Ngôn ngữ</th>
-              <th className="w-32 px-4 py-3" />
+              <th className="w-40 px-4 py-3" />
             </tr>
           </thead>
           <tbody className="divide-y divide-ink/10">
@@ -165,6 +167,9 @@ export default function ArtifactsAdmin() {
                       <IconButton label="Sửa" onClick={() => setEditingId(a.id)}>
                         <Pencil size={15} />
                       </IconButton>
+                      <IconButton label="In mã QR" onClick={() => setQrArtifact(a)}>
+                        <QrCode size={15} />
+                      </IconButton>
                       <a
                         href={`/hien-vat/${a.id}`}
                         target="_blank"
@@ -198,6 +203,14 @@ export default function ArtifactsAdmin() {
             refresh()
             setEditingId(id) // mở luôn form sửa để thêm bản dịch tiếng Anh nếu cần
           }}
+        />
+      )}
+
+      {qrArtifact && (
+        <QrPrintModal
+          code={qrArtifact.qr_code}
+          title={qrArtifact.translations.length ? titleOf(qrArtifact) : ''}
+          onClose={() => setQrArtifact(null)}
         />
       )}
 
