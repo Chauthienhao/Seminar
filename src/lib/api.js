@@ -57,6 +57,8 @@ export const api = {
   getArtifact: (id, lang = 'vi') => request(withQuery(`/artifacts/${id}`, { lang })),
 
   // ---------- Phòng & bản đồ ----------
+  listArtifactPositions: (lang = 'vi', options = {}) =>
+    request(withQuery('/map/artifacts', { lang }), options),
   listRooms: () => request('/rooms'),
   getRoom: (id, lang = 'vi') => request(withQuery(`/rooms/${id}`, { lang })),
 

@@ -4,7 +4,7 @@ Gộp chung 1 file cho gọn theo đúng cấu trúc thư mục domain/ đã ch�
 """
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 
 # ---------- Room ----------
@@ -91,6 +91,19 @@ class ArtifactSummary(BaseModel):
     title: str
     period: str | None = None
     image_url: str | None = None
+
+
+class ArtifactMapPoint(BaseModel):
+    """One real artifact with geographic coordinates and popup information."""
+
+    id: str
+    qr_code: str
+    title: str
+    image_url: str | None = None
+    room: RoomOut | None = None
+    description: str | None = None
+    lat: float = Field(ge=-90, le=90, allow_inf_nan=False)
+    lng: float = Field(ge=-180, le=180, allow_inf_nan=False)
 
 
 class RoomDetail(RoomOut):

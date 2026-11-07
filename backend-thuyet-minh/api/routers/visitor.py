@@ -10,6 +10,7 @@ from core.database import get_db
 from core.exceptions import NotFoundError
 from domain.schemas import (
     ArtifactDetail,
+    ArtifactMapPoint,
     ArtifactSummary,
     PlayLogCreate,
     PlayLogOut,
@@ -80,6 +81,15 @@ def get_room(room_id: str, lang: str = Depends(get_language), db: Session = Depe
         return MapService(db).get_room(room_id, lang)
     except NotFoundError as e:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail=str(e))
+
+
+@router.get("/map/artifacts", response_model=list[ArtifactMapPoint])
+def list_artifact_positions(
+    lang: str = Depends(get_language),
+    db: Session = Depends(get_db),
+):
+    """All real artifact markers with valid GPS and popup information."""
+    return MapService(db).list_artifact_positions(lang)
 
 
 @router.get("/map/nearby", response_model=ArtifactSummary | None)

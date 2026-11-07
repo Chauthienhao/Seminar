@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 from core.exceptions import ConflictError, InvalidDataError, NotFoundError
 from domain.entities import Artifact, Room, Tour, TourArtifact
 from domain.schemas import (
+    ArtifactMapPoint,
     ArtifactSummary,
     RoomCreate,
     RoomDetail,
@@ -34,6 +35,51 @@ class MapService:
         self.rooms = RoomRepository(db)
         self.tours = TourRepository(db)
         self.artifacts = ArtifactRepository(db)
+
+    def list_artifact_positions(self, language_code: str = "vi") -> list[ArtifactMapPoint]:
+        """Return database-backed marker points, without routing or mock data."""
+        points = []
+        for artifact in self.artifacts.list_for_map():
+            # Keep the API robust to non-finite values from database drivers.
+            if not (
+                math.isfinite(artifact.lat)
+                and math.isfinite(artifact.lng)
+                and -90 <= artifact.lat <= 90
+                and -180 <= artifact.lng <= 180
+            ):
+                continue
+
+            translations = sorted(
+                artifact.translations,
+                key=lambda translation: (translation.language_code, translation.id),
+            )
+            translation = next(
+                (item for item in translations if item.language_code == language_code),
+                None,
+            )
+            if translation is None:
+                translation = next(
+                    (item for item in translations if item.language_code == "vi"),
+                    translations[0] if translations else None,
+                )
+
+            description = " ".join((translation.transcript or "").split()) if translation else ""
+            if len(description) > 220:
+                description = description[:217].rstrip() + "..."
+
+            points.append(
+                ArtifactMapPoint(
+                    id=artifact.id,
+                    qr_code=artifact.qr_code,
+                    title=translation.title if translation else artifact.qr_code,
+                    image_url=artifact.image_url,
+                    room=RoomOut.model_validate(artifact.room) if artifact.room else None,
+                    description=description or None,
+                    lat=artifact.lat,
+                    lng=artifact.lng,
+                )
+            )
+        return points
 
     # ---------- Rooms ----------
 

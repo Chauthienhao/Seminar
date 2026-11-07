@@ -60,7 +60,10 @@ async function adminRequest(path, options = {}) {
 const json = (method, body) => ({ method, body: JSON.stringify(body) })
 
 export async function login(username, password) {
-  const res = await fetch(`${ADMIN_API}/login`, json('POST', { username, password }))
+  const res = await fetch(`${ADMIN_API}/login`, {
+    ...json('POST', { username, password }),
+    headers: { 'Content-Type': 'application/json' },
+  })
   if (!res.ok) {
     const body = await res.json().catch(() => ({}))
     throw new Error(formatDetail(body.detail, 'Sai tên đăng nhập hoặc mật khẩu.'))

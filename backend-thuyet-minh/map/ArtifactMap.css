@@ -1,0 +1,49 @@
+.artifact-map { position: relative; isolation: isolate; width: 100%; min-height: 300px; overflow: hidden; background: #edf0eb; color: #333d46; font-family: Arial, "Segoe UI", sans-serif; }
+.artifact-map *, .artifact-map *::before, .artifact-map *::after { box-sizing: border-box; }
+.artifact-map .artifact-map-canvas { z-index: 0; width: 100%; height: 100%; min-height: 300px; background: #edf0eb; font-family: inherit; }
+.artifact-map .leaflet-control-zoom { overflow: hidden; border: 1px solid #d6dce2; border-radius: 5px; box-shadow: 0 1px 5px #20212430; }
+.artifact-map .leaflet-control-zoom a { color: #596674; background: #fff; }
+.artifact-map .leaflet-control-zoom a:hover { background: #f1f4f7; }
+.artifact-map .artifact-map-reset { overflow: hidden; border: 1px solid #d6dce2; border-radius: 5px; box-shadow: 0 1px 5px #20212430; }
+.artifact-map .artifact-map-reset button { display: block; min-height: 36px; padding: 8px 12px; border: 0; background: #fff; color: #435363; font-family: inherit; font-size: 12px; cursor: pointer; }
+.artifact-map .artifact-map-reset button:hover { background: #f1f4f7; }
+.artifact-map .leaflet-control-attribution { padding: 2px 5px; color: #65717d; background: rgb(255 255 255 / 94%); font-size: 10px; }
+.artifact-map .leaflet-control-attribution a { color: #3267a8; }
+.artifact-map .artifact-map-marker { border: 0; background: transparent; cursor: pointer; filter: drop-shadow(0 2px 2px #24374835); }
+.artifact-map .artifact-map-marker svg { display: block; overflow: visible; }
+.artifact-map .artifact-map-marker.is-selected { filter: drop-shadow(0 0 4px #7c274160) drop-shadow(0 2px 2px #24374835); }
+.artifact-map .artifact-map-marker:focus-visible { outline: 3px solid #7c2741; outline-offset: 4px; border-radius: 14px; }
+.artifact-map .artifact-map-tooltip { max-width: 240px; white-space: normal; color: #3b4650; border-color: #dce2e7; border-radius: 5px; background: #fff; box-shadow: 0 2px 7px #24374825; font-family: inherit; font-size: 12px; line-height: 1.5; }
+.artifact-map .leaflet-popup-content-wrapper { overflow: hidden; border: 1px solid #e1e5e9; border-radius: 9px; background: #fff; box-shadow: 0 3px 14px #20212430; }
+.artifact-map .leaflet-popup-tip { background: #fff; }
+.artifact-map .artifact-map-popup-shifted .leaflet-popup-tip-container { display: none; }
+.artifact-map .leaflet-popup-content { margin: 18px; color: #53606b; font-family: inherit; font-size: 12px; line-height: 1.6; }
+.artifact-map .leaflet-popup-content::-webkit-scrollbar { width: 5px; }
+.artifact-map .leaflet-popup-content::-webkit-scrollbar-thumb { border-radius: 5px; background: #c9d1d9; }
+.artifact-map .leaflet-popup-close-button { color: #76818b; }
+.artifact-map .artifact-map-popup { min-width: 0; text-align: left; }
+.artifact-map .artifact-map-popup h3 { margin: 0 16px 12px 0; color: #24313d; font-size: 17px; font-weight: 600; line-height: 1.4; overflow-wrap: anywhere; }
+.artifact-map .artifact-map-image { display: block; width: 100%; height: 150px; margin: 0 0 13px; border: 1px solid #e8ecef; border-radius: 5px; background: #f6f7f8; object-fit: contain; }
+.artifact-map .artifact-map-image-placeholder { display: grid; place-items: center; min-height: 110px; margin-bottom: 13px; border: 1px solid #e4e9ed; border-radius: 5px; background: #f5f7f9; color: #8b959e; font-size: 12px; }
+.artifact-map .artifact-map-facts { margin: 0 0 11px; padding: 0; }
+.artifact-map .artifact-map-facts > div { display: grid; grid-template-columns: 55px minmax(0, 1fr); gap: 7px; margin: 5px 0; }
+.artifact-map .artifact-map-facts dt { color: #8a949e; font-size: 11px; }
+.artifact-map .artifact-map-facts dd { margin: 0; color: #53606b; overflow-wrap: anywhere; }
+.artifact-map .artifact-map-description { margin: 10px 0 14px; color: #6c7782; font-size: 12px; line-height: 1.75; overflow-wrap: anywhere; }
+.artifact-map .artifact-map-details-link { display: flex; align-items: center; justify-content: center; width: 100%; min-height: 35px; padding: 8px 12px; border: 1px solid #2878ce; border-radius: 5px; background: #2878ce; color: #fff; font-size: 12px; font-weight: 600; line-height: 1.4; text-decoration: none; }
+.artifact-map .artifact-map-details-link:hover { border-color: #1e63ad; background: #1e63ad; color: #fff; text-decoration: none; }
+.artifact-map .artifact-map-coincident-label { display: flex; flex-direction: column; gap: 5px; margin: 0 0 13px; color: #7c8791; font-size: 11px; }
+.artifact-map .artifact-map-coincident-select { width: 100%; min-width: 0; min-height: 34px; padding: 6px 8px; border: 1px solid #d7dee5; border-radius: 5px; background: #f8fafc; color: #435363; font-family: inherit; font-size: 12px; }
+.artifact-map .artifact-map-message { position: absolute; z-index: 1000; top: 12px; left: 50%; display: flex; align-items: center; justify-content: center; gap: 10px; width: max-content; max-width: calc(100% - 115px); padding: 11px 14px; transform: translateX(-50%); border: 1px solid #e1e6eb; border-radius: 7px; background: rgb(255 255 255 / 97%); color: #6d7b87; box-shadow: 0 2px 10px #20212420; font-size: 12px; line-height: 1.6; text-align: center; }
+.artifact-map .artifact-map-message.is-error { border-color: #e5d3d8; color: #8b5363; }
+.artifact-map .artifact-map-message button { flex-shrink: 0; min-height: 30px; padding: 5px 9px; border: 1px solid #d7c5cb; border-radius: 5px; background: #fff; color: #7c2741; font-family: inherit; font-size: 11px; cursor: pointer; }
+.artifact-map .artifact-map-message button:hover { background: #fbf4f6; }
+.artifact-map .artifact-map-details-link:focus-visible, .artifact-map button:focus-visible, .artifact-map select:focus-visible { outline: 3px solid #8ab4f8; outline-offset: 3px; }
+.artifact-map .artifact-map-reset button:focus-visible { outline-offset: -3px; }
+@media (max-width: 600px) {
+  .artifact-map .leaflet-control-attribution { font-size: 8px; }
+  .artifact-map .leaflet-popup-content { margin: 15px; font-size: 11px; }
+  .artifact-map .artifact-map-popup h3 { font-size: 16px; }
+  .artifact-map .artifact-map-image { height: 135px; }
+  .artifact-map .artifact-map-message { top: 58px; left: 58px; max-width: calc(100% - 72px); padding: 9px 11px; transform: none; font-size: 11px; }
+}

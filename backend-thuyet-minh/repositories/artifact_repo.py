@@ -42,6 +42,26 @@ class ArtifactRepository:
             q = q.filter(or_(Artifact.qr_code.ilike(like), ArtifactTranslation.title.ilike(like)))
         return q.order_by(ArtifactTranslation.title).offset(skip).limit(limit).all()
 
+    def list_for_map(self) -> list[Artifact]:
+        """Read every artifact with valid GPS, including zero coordinates.
+
+        A map must not silently truncate to the search/admin page limits.
+        Eager loading also keeps room/translation access independent of the
+        number of markers and includes artifacts without translations.
+        """
+        return (
+            self.db.query(Artifact)
+            .options(joinedload(Artifact.translations), joinedload(Artifact.room))
+            .filter(
+                Artifact.lat.isnot(None),
+                Artifact.lng.isnot(None),
+                Artifact.lat.between(-90, 90),
+                Artifact.lng.between(-180, 180),
+            )
+            .order_by(Artifact.qr_code, Artifact.id)
+            .all()
+        )
+
     def find_nearby(self, lat: float, lng: float, max_candidates: int = 50) -> list[Artifact]:
         """
         Lấy danh sách hiện vật có toạ độ để tính khoảng cách geofence ở tầng service.
