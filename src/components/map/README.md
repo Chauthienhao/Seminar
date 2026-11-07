@@ -12,12 +12,14 @@
 - Các hiện vật trùng GPS vẫn giữ tọa độ thật và chọn được trong popup.
 - Không có đường nối, OSRM, routing, quãng đường hay thời gian di chuyển. Không thêm dữ liệu mẫu.
 
-Chạy frontend từ thư mục gốc `Seminar` bằng `npm run dev`, rồi mở `/ban-do`. Có thể chạy `npm run dev` ngay trong thư mục `map`; script sẽ mở frontend của dự án gốc để liên kết chi tiết hoạt động đúng.
+Chạy frontend từ thư mục gốc `Seminar` bằng `npm run dev`, rồi mở `/ban-do`. Liên kết “Xem chi tiết” dùng `<Link>` của react-router nên chuyển trang không tải lại ứng dụng.
 
 Backend cần chạy trong `backend-thuyet-minh`:
 
 ```powershell
-..\.venv\Scripts\python.exe -m uvicorn main:app --host 127.0.0.1 --port 8000
+.\.venv\Scripts\python.exe -m uvicorn main:app --host 127.0.0.1 --port 8000
 ```
+
+Test dữ liệu bản đồ: `node --test src/components/map/artifactMapData.test.mjs`.
 
 Cần Internet cho nền OpenStreetMap và ảnh từ URL trong database. Khi database chưa có hiện vật có GPS hợp lệ, bản đồ thông báo chưa có dữ liệu và không tự sinh marker.

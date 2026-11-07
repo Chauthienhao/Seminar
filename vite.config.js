@@ -3,9 +3,6 @@ import react from '@vitejs/plugin-react'
 
 export default defineConfig({
   plugins: [react()],
-  resolve: {
-    dedupe: ['react', 'react-dom', 'leaflet', 'react-leaflet', '@react-leaflet/core'],
-  },
   server: {
     port: 5173,
     proxy: {

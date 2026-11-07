@@ -1,4 +1,4 @@
-import ArtifactMapPage from '../../backend-thuyet-minh/map/ArtifactMapPage.jsx'
+import ArtifactMapPage from '../components/map/ArtifactMapPage.jsx'
 import { api } from '../lib/api.js'
 
 const loadArtifacts = signal => api.listArtifactPositions('vi', { signal })

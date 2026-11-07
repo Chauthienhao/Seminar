@@ -20,7 +20,7 @@ export default function Footer() {
           <ul className="mt-3 space-y-2 text-sm text-cream/70">
             <li><NavLink to="/" className="hover:text-cream">Hiện vật nổi bật</NavLink></li>
             <li><NavLink to="/bo-suu-tap" className="hover:text-cream">Bộ sưu tập nổi bật</NavLink></li>
-            <li><NavLink to="/ban-do" className="hover:text-cream">Bản đồ 3D</NavLink></li>
+            <li><NavLink to="/ban-do" className="hover:text-cream">Bản đồ 2D</NavLink></li>
           </ul>
         </div>
 

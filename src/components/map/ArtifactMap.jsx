@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { MapContainer, Marker, Polygon, Popup, TileLayer, Tooltip, useMap } from 'react-leaflet';
+import { Link } from 'react-router-dom';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import './ArtifactMap.css';
@@ -211,7 +212,7 @@ function ArtifactPopup({ artifact, coincidentArtifacts, onSelect }) {
         <div><dt>Phòng</dt><dd>{artifact.room?.name_vi || 'Chưa có thông tin phòng'}</dd></div>
       </dl>
       <p className="artifact-map-description">{description || 'Chưa có mô tả.'}</p>
-      <a className="artifact-map-details-link" href={'/hien-vat/' + encodeURIComponent(artifact.id)}>Xem chi tiết</a>
+      <Link className="artifact-map-details-link" to={'/hien-vat/' + encodeURIComponent(artifact.id)}>Xem chi tiết</Link>
     </article>
   );
 }
@@ -244,7 +245,7 @@ function ArtifactMarker({ artifact, coincidentArtifacts, selectedId, onSelect })
   );
 }
 
-/** Display-only map. Its parent owns API requests and application navigation. */
+/** Display-only map. Its parent owns API requests; detail links use the app router. */
 export default function ArtifactMap({ artifacts = EMPTY_ARTIFACTS, loading = false, error = null, onRetry, height = '100%' }) {
   const normalized = useMemo(() => normalizeArtifacts(artifacts).filter(isInMuseum), [artifacts]);
   const groups = useMemo(() => groupArtifactsByCoordinate(normalized), [normalized]);
