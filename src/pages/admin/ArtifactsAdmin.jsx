@@ -3,6 +3,7 @@ import { ExternalLink, Loader2, Pencil, Plus, Search, Square, Trash2, Volume2 } 
 
 import { api } from '../../lib/api.js'
 import { adminApi } from '../../lib/adminApi.js'
+import LocationPicker from '../../components/map/LocationPicker.jsx'
 import Modal from './components/Modal.jsx'
 import { useConfirm, useToast } from './components/Feedback.jsx'
 import {
@@ -229,7 +230,10 @@ const generalToPayload = (g) => ({
   geofence_radius: toNumberOrNull(g.geofence_radius) ?? DEFAULT_GEOFENCE_RADIUS,
 })
 
-function GeneralFields({ value, onChange, rooms, qrLocked }) {
+// Ghim của các hiện vật khác, hiện mờ trên bản đồ chọn vị trí để dễ canh chỗ
+const loadMapArtifacts = () => api.listArtifactPositions('vi')
+
+function GeneralFields({ value, onChange, rooms, qrLocked, artifactId = null }) {
   const set = (field) => (e) => onChange({ ...value, [field]: e.target.value })
   return (
     <div className="grid gap-4 sm:grid-cols-2">
@@ -254,19 +258,33 @@ function GeneralFields({ value, onChange, rooms, qrLocked }) {
       <Field label="Link ảnh minh hoạ">
         <input className={inputClass} value={value.image_url} onChange={set('image_url')} placeholder="https://..." />
       </Field>
-      <div className="grid grid-cols-3 gap-3 sm:col-span-2">
-        <Field label="Vĩ độ (lat)">
-          <input type="number" step="any" className={inputClass} value={value.lat} onChange={set('lat')} />
-        </Field>
-        <Field label="Kinh độ (lng)">
-          <input type="number" step="any" className={inputClass} value={value.lng} onChange={set('lng')} />
-        </Field>
-        <Field label="Bán kính kích hoạt (m)">
-          <input type="number" min="1" className={inputClass} value={value.geofence_radius} onChange={set('geofence_radius')} />
-        </Field>
-        <p className="col-span-3 -mt-1 text-xs text-ink-soft">
-          Toạ độ và bán kính dùng cho tính năng tự phát thuyết minh theo GPS ở bản mobile — có thể bỏ trống.
-        </p>
+      {/* Không bọc trong <Field>/<label>: bấm vào bản đồ trong label sẽ kích hoạt nút/ô nhập bên trong */}
+      <div className="sm:col-span-2">
+        <span className="mb-1 block text-xs font-semibold text-ink">Vị trí trên bản đồ</span>
+        <LocationPicker
+          lat={value.lat}
+          lng={value.lng}
+          excludeId={artifactId}
+          loadOthers={loadMapArtifacts}
+          onChange={({ lat, lng }) => onChange({ ...value, lat, lng })}
+        />
+        <details className="mt-3 text-xs text-ink-soft">
+          <summary className="cursor-pointer select-none font-semibold">Nhập toạ độ thủ công / bán kính kích hoạt</summary>
+          <div className="mt-3 grid grid-cols-3 gap-3">
+            <Field label="Vĩ độ (lat)">
+              <input type="number" step="any" className={inputClass} value={value.lat} onChange={set('lat')} />
+            </Field>
+            <Field label="Kinh độ (lng)">
+              <input type="number" step="any" className={inputClass} value={value.lng} onChange={set('lng')} />
+            </Field>
+            <Field label="Bán kính kích hoạt (m)">
+              <input type="number" min="1" className={inputClass} value={value.geofence_radius} onChange={set('geofence_radius')} />
+            </Field>
+            <p className="col-span-3 -mt-1">
+              Bán kính dùng cho tính năng tự phát thuyết minh theo GPS ở bản mobile.
+            </p>
+          </div>
+        </details>
       </div>
     </div>
   )
@@ -409,7 +427,7 @@ function EditArtifactModal({ artifactId, rooms, onClose, onChanged }) {
         <>
           <form onSubmit={handleSaveGeneral}>
             <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-ink-soft">Thông tin chung</h3>
-            <GeneralFields value={general} onChange={setGeneral} rooms={rooms} qrLocked />
+            <GeneralFields value={general} onChange={setGeneral} rooms={rooms} qrLocked artifactId={artifactId} />
             <div className="mt-4 flex justify-end">
               <Button type="submit" loading={saving}>
                 Lưu thông tin chung

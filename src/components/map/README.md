@@ -11,6 +11,7 @@
 - Rê chuột hoặc chọn bằng bàn phím để xem tên; marker được chọn có màu nổi bật.
 - Các hiện vật trùng GPS vẫn giữ tọa độ thật và chọn được trong popup.
 - Không có đường nối, OSRM, routing, quãng đường hay thời gian di chuyển. Không thêm dữ liệu mẫu.
+- Trang admin (Thêm/Sửa hiện vật) dùng `LocationPicker.jsx`: bấm vào bản đồ để đặt ghim, kéo ghim để chỉnh, form tự điền `lat`/`lng`. Ghim các hiện vật khác hiện mờ để canh vị trí. Phần Leaflet dùng chung (vùng che, giới hạn zoom, icon) nằm trong `museumMapLeaflet.js`.
 
 Chạy frontend từ thư mục gốc `Seminar` bằng `npm run dev`, rồi mở `/ban-do`. Liên kết “Xem chi tiết” dùng `<Link>` của react-router nên chuyển trang không tải lại ứng dụng.
 
