@@ -11,8 +11,10 @@
 -- Thứ tự INSERT KHÔNG được đổi: bảng được tham chiếu (khoá ngoại) phải có dữ liệu trước:
 --   rooms -> artifacts -> artifact_translations ;  tours -> tour_artifacts ;  artifacts -> play_logs
 --
--- map_x / map_y: vị trí trên sơ đồ mặt bằng (khung 600x420). lat / lng: GPS MẪU quanh
--- Bảo tàng TP.HCM (65 Lý Tự Trọng, Q.1), suy ra từ vị trí trên sơ đồ — đo lại tại chỗ nếu dùng thật.
+-- map_x / map_y: vị trí trên sơ đồ mặt bằng (khung 600x420). lat / lng: GPS MẪU nằm trong
+-- tòa nhà Bảo tàng TP.HCM (65 Lý Tự Trọng, Q.1; đường viền OSM way 802105071), suy từ map_x/map_y:
+-- góc trên-trái sơ đồ = góc tây tòa nhà, trục x dọc mặt Lý Tự Trọng (hướng đông bắc), trục y vào trong
+-- (hướng đông nam). Chưa phải số đo thực địa — đo lại tại chỗ nếu dùng geofence thật.
 -- ============================================================================
 
 USE museum_audio_guide;
@@ -35,11 +37,11 @@ INSERT IGNORE INTO rooms (id, code, name_vi, name_en, floor_no, map_x, map_y, ma
 -- 2. artifacts — Hiện vật / Điểm POI. room_id là khoá ngoại tới rooms (RESTRICT)
 -- image_url để NULL: nhập đường dẫn ảnh thật sau. SG-ENTRANCE là điểm sảnh đón tiếp (không có niên đại).
 INSERT IGNORE INTO artifacts (id, qr_code, room_id, lat, lng, geofence_radius, map_x, map_y, image_url, period) VALUES
-('bbbbbbbb-bbbb-4bbb-abbb-bbbbbbbbbb01', 'SG-ENTRANCE', 'aaaaaaaa-aaaa-4aaa-aaaa-aaaaaaaaaa01', 10.777137, 106.700669, 15, 115, 110, NULL, NULL),
-('bbbbbbbb-bbbb-4bbb-abbb-bbbbbbbbbb02', 'SG-1815', 'aaaaaaaa-aaaa-4aaa-aaaa-aaaaaaaaaa02', 10.777137, 106.700806, 8, 265, 110, NULL, 'Thế kỷ 18 - 19'),
-('bbbbbbbb-bbbb-4bbb-abbb-bbbbbbbbbb03', 'SG-1822', 'aaaaaaaa-aaaa-4aaa-aaaa-aaaaaaaaaa03', 10.777141, 106.700975, 8, 450, 105, NULL, 'Triều Nguyễn, thế kỷ 19'),
-('bbbbbbbb-bbbb-4bbb-abbb-bbbbbbbbbb04', 'SG-1930', 'aaaaaaaa-aaaa-4aaa-aaaa-aaaaaaaaaa05', 10.776951, 106.700842, 8, 305, 315, NULL, 'Thời Pháp thuộc, 1930'),
-('bbbbbbbb-bbbb-4bbb-abbb-bbbbbbbbbb05', 'SG-2041', 'aaaaaaaa-aaaa-4aaa-aaaa-aaaaaaaaaa08', 10.777137, 106.700838, 8, 300, 110, NULL, 'Thế kỷ 20');
+('bbbbbbbb-bbbb-4bbb-abbb-bbbbbbbbbb01', 'SG-ENTRANCE', 'aaaaaaaa-aaaa-4aaa-aaaa-aaaaaaaaaa01', 10.775824, 106.699494, 15, 115, 110, NULL, NULL),
+('bbbbbbbb-bbbb-4bbb-abbb-bbbbbbbbbb02', 'SG-1815', 'aaaaaaaa-aaaa-4aaa-aaaa-aaaaaaaaaa02', 10.775937, 106.699600, 8, 265, 110, NULL, 'Thế kỷ 18 - 19'),
+('bbbbbbbb-bbbb-4bbb-abbb-bbbbbbbbbb03', 'SG-1822', 'aaaaaaaa-aaaa-4aaa-aaaa-aaaaaaaaaa03', 10.776079, 106.699728, 8, 450, 105, NULL, 'Triều Nguyễn, thế kỷ 19'),
+('bbbbbbbb-bbbb-4bbb-abbb-bbbbbbbbbb04', 'SG-1930', 'aaaaaaaa-aaaa-4aaa-aaaa-aaaaaaaaaa05', 10.775870, 106.699743, 8, 305, 315, NULL, 'Thời Pháp thuộc, 1930'),
+('bbbbbbbb-bbbb-4bbb-abbb-bbbbbbbbbb05', 'SG-2041', 'aaaaaaaa-aaaa-4aaa-aaaa-aaaaaaaaaa08', 10.775964, 106.699625, 8, 300, 110, NULL, 'Thế kỷ 20');
 
 -- 3. artifact_translations — Nội dung VI + EN của mỗi POI (audio_url = NULL -> backend dùng tts-service)
 INSERT IGNORE INTO artifact_translations (id, artifact_id, language_code, title, transcript, audio_url, audio_duration) VALUES
