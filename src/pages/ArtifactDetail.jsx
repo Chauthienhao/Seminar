@@ -194,11 +194,14 @@ export default function ArtifactDetail() {
         {/* Info column */}
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.16em] text-maroon">
-            {artifact.qr_code}
+            {artifact.code}
             {artifact.period ? ` — ${artifact.period}` : ''}
           </p>
           <h1 className="mt-2 text-3xl font-semibold sm:text-4xl">{translation.title}</h1>
-          {room && <p className="mt-2 text-sm text-ink-soft">Khu trưng bày: {room.name_vi}</p>}
+          <p className="mt-2 text-sm text-ink-soft">
+            Vị trí: {artifact.poi.name_vi}
+            {room ? ` — ${room.name_vi}` : ''}
+          </p>
 
           <div className="mt-5 flex gap-2">
             <button

@@ -3,5 +3,7 @@ dist
 .env
 .DS_Store
 __pycache__
+# Môi trường ảo Python: mỗi máy tự tạo (python -m venv .venv), không đưa lên git
+.venv/
 # Ảnh admin tải lên là dữ liệu, không phải code (sao lưu cùng database)
 backend-thuyet-minh/uploads/

@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react'
 import { NavLink, Navigate, Route, Routes } from 'react-router-dom'
-import { Lock, LogOut, Loader2, LayoutDashboard, Landmark, DoorOpen, Route as RouteIcon } from 'lucide-react'
+import { Lock, LogOut, Loader2, LayoutDashboard, Landmark, DoorOpen, MapPin, Route as RouteIcon } from 'lucide-react'
 
 import { adminApi, AUTH_EXPIRED_EVENT, clearToken, getToken, login, saveToken } from '../../lib/adminApi.js'
 import { FeedbackProvider } from './components/Feedback.jsx'
 import AdminOverview from './AdminOverview.jsx'
 import ArtifactsAdmin from './ArtifactsAdmin.jsx'
+import PoisAdmin from './PoisAdmin.jsx'
 import RoomsAdmin from './RoomsAdmin.jsx'
 import ToursAdmin from './ToursAdmin.jsx'
 
@@ -15,6 +16,7 @@ import ToursAdmin from './ToursAdmin.jsx'
  * Sau khi đăng nhập -> khung CMS gồm menu bên trái + các trang con:
  *   /admin           Tổng quan
  *   /admin/hien-vat  Hiện vật + bản dịch
+ *   /admin/diem      Điểm tham quan (POI): mã QR, vị trí GPS
  *   /admin/phong     Phòng trưng bày
  *   /admin/tour      Tuyến tham quan
  * Mọi request đi qua src/lib/adminApi.js (tự kèm header Authorization).
@@ -26,6 +28,7 @@ import ToursAdmin from './ToursAdmin.jsx'
 const NAV_ITEMS = [
   { to: '/admin', label: 'Tổng quan', icon: LayoutDashboard, end: true },
   { to: '/admin/hien-vat', label: 'Hiện vật', icon: Landmark },
+  { to: '/admin/diem', label: 'Điểm tham quan', icon: MapPin },
   { to: '/admin/phong', label: 'Phòng', icon: DoorOpen },
   { to: '/admin/tour', label: 'Tour', icon: RouteIcon },
 ]
@@ -201,6 +204,7 @@ function AdminLayout({ onLogout }) {
         <Routes>
           <Route index element={<AdminOverview me={me} />} />
           <Route path="hien-vat" element={<ArtifactsAdmin />} />
+          <Route path="diem" element={<PoisAdmin />} />
           <Route path="phong" element={<RoomsAdmin />} />
           <Route path="tour" element={<ToursAdmin />} />
           <Route path="*" element={<Navigate to="/admin" replace />} />

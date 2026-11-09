@@ -104,6 +104,12 @@ export const adminApi = {
   deleteTranslation: (artifactId, lang) =>
     adminRequest(`/artifacts/${artifactId}/translations/${lang}`, { method: 'DELETE' }),
 
+  // ---------- Điểm tham quan (POI): mỗi POI trả kèm danh sách hiện vật đặt tại đó ----------
+  listPois: () => adminRequest('/pois'),
+  createPoi: (payload) => adminRequest('/pois', json('POST', payload)),
+  updatePoi: (id, payload) => adminRequest(`/pois/${id}`, json('PUT', payload)),
+  deletePoi: (id) => adminRequest(`/pois/${id}`, { method: 'DELETE' }),
+
   // ---------- Phòng (danh sách phòng dùng chung API công khai GET /api/rooms) ----------
   createRoom: (payload) => adminRequest('/rooms', json('POST', payload)),
   updateRoom: (id, payload) => adminRequest(`/rooms/${id}`, json('PUT', payload)),
@@ -111,7 +117,6 @@ export const adminApi = {
 
   // ---------- Tour ----------
   listTours: () => adminRequest('/tours'),
-  getTour: (id) => adminRequest(`/tours/${id}`),
   createTour: (payload) => adminRequest('/tours', json('POST', payload)),
   updateTour: (id, payload) => adminRequest(`/tours/${id}`, json('PUT', payload)),
   deleteTour: (id) => adminRequest(`/tours/${id}`, { method: 'DELETE' }),

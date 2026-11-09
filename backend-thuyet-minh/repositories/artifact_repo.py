@@ -1,12 +1,21 @@
 """
-Tầng truy xuất dữ liệu cho Artifact / ArtifactTranslation / Room.
+Tầng truy xuất dữ liệu cho Artifact / ArtifactTranslation.
 Không chứa business logic (không tính toán, không quyết định luật nghiệp vụ)
 — chỉ đọc/ghi CSDL. Business logic nằm ở services/audio_service.py.
+Vị trí (QR, GPS) không nằm ở đây mà ở bảng pois — xem repositories/poi_repo.py.
 """
 from sqlalchemy import or_
 from sqlalchemy.orm import Session, joinedload
 
-from domain.entities import Artifact, ArtifactTranslation
+from domain.entities import Artifact, ArtifactTranslation, Poi
+
+
+def _with_details():
+    """Nạp sẵn POI + phòng + bản dịch để service đọc mà không phát sinh thêm truy vấn."""
+    return (
+        joinedload(Artifact.poi).joinedload(Poi.room),
+        joinedload(Artifact.translations),
+    )
 
 
 class ArtifactRepository:
@@ -14,105 +23,39 @@ class ArtifactRepository:
         self.db = db
 
     def get_by_id(self, artifact_id: str) -> Artifact | None:
-        return (
-            self.db.query(Artifact)
-            .options(joinedload(Artifact.room), joinedload(Artifact.translations))
-            .filter(Artifact.id == artifact_id)
-            .first()
-        )
+        return self.db.query(Artifact).options(*_with_details()).filter(Artifact.id == artifact_id).first()
 
-    def get_by_qr_code(self, qr_code: str) -> Artifact | None:
-        return (
-            self.db.query(Artifact)
-            .options(joinedload(Artifact.room), joinedload(Artifact.translations))
-            .filter(Artifact.qr_code == qr_code)
-            .first()
-        )
+    def get_by_code(self, code: str) -> Artifact | None:
+        return self.db.query(Artifact).options(*_with_details()).filter(Artifact.code == code).first()
 
     def search(self, query: str | None, language_code: str, skip: int = 0, limit: int = 20) -> list[Artifact]:
-        """Tìm theo mã QR hoặc tiêu đề đã dịch — dùng cho trang Tra cứu hiện vật trên web."""
+        """Tìm theo mã hoặc tiêu đề đã dịch — dùng cho trang Tra cứu hiện vật trên web."""
         q = (
             self.db.query(Artifact)
             .join(ArtifactTranslation)
             .filter(ArtifactTranslation.language_code == language_code)
-            .options(joinedload(Artifact.translations), joinedload(Artifact.room))
+            .options(*_with_details())
         )
         if query:
             like = f"%{query}%"
-            q = q.filter(or_(Artifact.qr_code.ilike(like), ArtifactTranslation.title.ilike(like)))
+            q = q.filter(or_(Artifact.code.ilike(like), ArtifactTranslation.title.ilike(like)))
         return q.order_by(ArtifactTranslation.title).offset(skip).limit(limit).all()
-
-    def list_for_map(self) -> list[Artifact]:
-        """Read every artifact with valid GPS, including zero coordinates.
-
-        A map must not silently truncate to the search/admin page limits.
-        Eager loading also keeps room/translation access independent of the
-        number of markers and includes artifacts without translations.
-        """
-        return (
-            self.db.query(Artifact)
-            .options(joinedload(Artifact.translations), joinedload(Artifact.room))
-            .filter(
-                Artifact.lat.isnot(None),
-                Artifact.lng.isnot(None),
-                Artifact.lat.between(-90, 90),
-                Artifact.lng.between(-180, 180),
-            )
-            .order_by(Artifact.qr_code, Artifact.id)
-            .all()
-        )
-
-    def find_nearby(self, lat: float, lng: float, max_candidates: int = 50) -> list[Artifact]:
-        """
-        Lấy danh sách hiện vật có toạ độ để tính khoảng cách geofence ở tầng service.
-        MySQL không có hàm khoảng cách địa lý sẵn nên lọc gần đúng bằng bounding box,
-        rồi service sẽ tính chính xác bằng công thức Haversine.
-        """
-        delta = 0.01  # ~1km, đủ rộng để không bỏ sót trước khi lọc chính xác
-        return (
-            self.db.query(Artifact)
-            .options(joinedload(Artifact.translations), joinedload(Artifact.room))
-            .filter(
-                Artifact.lat.isnot(None),
-                Artifact.lng.isnot(None),
-                Artifact.lat.between(lat - delta, lat + delta),
-                Artifact.lng.between(lng - delta, lng + delta),
-            )
-            .limit(max_candidates)
-            .all()
-        )
-
-    def list_all(self, skip: int = 0, limit: int = 100) -> list[Artifact]:
-        return (
-            self.db.query(Artifact)
-            .options(joinedload(Artifact.translations), joinedload(Artifact.room))
-            .offset(skip)
-            .limit(limit)
-            .all()
-        )
 
     def list_for_admin(self, query: str | None, skip: int = 0, limit: int = 50) -> list[Artifact]:
         """
         Danh sách cho CMS: lấy CẢ hiện vật chưa có bản dịch nào (khác `search()` phía khách
-        tham quan vốn join bắt buộc với bản dịch), tìm theo mã QR hoặc tiêu đề ở mọi ngôn ngữ.
+        tham quan vốn join bắt buộc với bản dịch), tìm theo mã hoặc tiêu đề ở mọi ngôn ngữ.
         """
-        q = self.db.query(Artifact).options(joinedload(Artifact.translations), joinedload(Artifact.room))
+        q = self.db.query(Artifact).options(*_with_details())
         if query:
             like = f"%{query}%"
             q = q.filter(
                 or_(
-                    Artifact.qr_code.ilike(like),
+                    Artifact.code.ilike(like),
                     Artifact.translations.any(ArtifactTranslation.title.ilike(like)),
                 )
             )
-        return q.order_by(Artifact.qr_code).offset(skip).limit(limit).all()
-
-    def existing_ids(self, artifact_ids: list[str]) -> set[str]:
-        """Trả về những id trong danh sách thực sự tồn tại — dùng để kiểm tra lộ trình tour."""
-        if not artifact_ids:
-            return set()
-        rows = self.db.query(Artifact.id).filter(Artifact.id.in_(artifact_ids)).all()
-        return {row.id for row in rows}
+        return q.order_by(Artifact.code).offset(skip).limit(limit).all()
 
     def create(self, artifact: Artifact) -> Artifact:
         self.db.add(artifact)

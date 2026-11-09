@@ -10,7 +10,7 @@ const EMPTY_ROOM = { code: '', name_vi: '', name_en: '' }
 
 export default function RoomsAdmin() {
   const [rooms, setRooms] = useState([])
-  const [artifactCountByRoom, setArtifactCountByRoom] = useState({})
+  const [poiCountByRoom, setPoiCountByRoom] = useState({})
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [newRoom, setNewRoom] = useState(null) // null = đang ẩn dòng thêm mới
@@ -22,14 +22,14 @@ export default function RoomsAdmin() {
 
   const load = useCallback(() => {
     setError(null)
-    return Promise.all([api.listRooms(), adminApi.listArtifacts()])
-      .then(([roomList, artifacts]) => {
+    return Promise.all([api.listRooms(), adminApi.listPois()])
+      .then(([roomList, pois]) => {
         setRooms(roomList)
         const counts = {}
-        artifacts.forEach((a) => {
-          if (a.room_id) counts[a.room_id] = (counts[a.room_id] || 0) + 1
+        pois.forEach((p) => {
+          counts[p.room_id] = (counts[p.room_id] || 0) + 1
         })
-        setArtifactCountByRoom(counts)
+        setPoiCountByRoom(counts)
       })
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false))
@@ -71,14 +71,14 @@ export default function RoomsAdmin() {
   }
 
   const handleDelete = async (room) => {
-    const count = artifactCountByRoom[room.id] || 0
+    const count = poiCountByRoom[room.id] || 0
     if (count > 0) {
-      toast.error(`Không thể xoá phòng ${room.code}: còn ${count} hiện vật. Hãy chuyển hoặc xoá các hiện vật này trước.`)
+      toast.error(`Không thể xoá phòng ${room.code}: còn ${count} điểm tham quan (POI). Hãy chuyển hoặc xoá các POI này trước.`)
       return
     }
     const ok = await confirm({
       title: `Xoá phòng ${room.code} — ${room.name_vi}?`,
-      message: 'Phòng này chưa có hiện vật nào.',
+      message: 'Phòng này chưa có điểm tham quan (POI) nào.',
     })
     if (!ok) return
     try {
@@ -104,7 +104,7 @@ export default function RoomsAdmin() {
     <div className="max-w-5xl">
       <PageHeader
         title="Phòng trưng bày"
-        description="Khu vực / phòng dùng để xếp hiện vật và hiển thị trên sơ đồ."
+        description="Khu vực / phòng chứa các điểm tham quan (POI). Phòng còn POI thì không xoá được."
         action={
           <Button onClick={() => setNewRoom(EMPTY_ROOM)} disabled={newRoom !== null}>
             <Plus size={16} /> Thêm phòng
@@ -120,7 +120,7 @@ export default function RoomsAdmin() {
               <th className="px-4 py-3 font-semibold">Mã phòng</th>
               <th className="px-4 py-3 font-semibold">Tên tiếng Việt</th>
               <th className="px-4 py-3 font-semibold">Tên tiếng Anh</th>
-              <th className="px-4 py-3 font-semibold">Số hiện vật</th>
+              <th className="px-4 py-3 font-semibold">Số POI</th>
               <th className="w-28 px-4 py-3" />
             </tr>
           </thead>
@@ -164,7 +164,7 @@ export default function RoomsAdmin() {
                     value={draft}
                     onChange={setDraft}
                     onKeyDown={onKeyDown(handleUpdate, () => setEditingId(null), isValid(draft))}
-                    countLabel={artifactCountByRoom[room.id] || 0}
+                    countLabel={poiCountByRoom[room.id] || 0}
                     actions={
                       <>
                         <IconButton label="Lưu" variant="primary" onClick={handleUpdate} disabled={busy || !isValid(draft)}>
@@ -181,7 +181,7 @@ export default function RoomsAdmin() {
                     <td className="px-4 py-3 font-semibold text-ink">{room.code}</td>
                     <td className="px-4 py-3">{room.name_vi}</td>
                     <td className="px-4 py-3 text-ink-soft">{room.name_en}</td>
-                    <td className="px-4 py-3 text-ink-soft">{artifactCountByRoom[room.id] || 0}</td>
+                    <td className="px-4 py-3 text-ink-soft">{poiCountByRoom[room.id] || 0}</td>
                     <td className="px-4 py-3">
                       <div className="flex justify-end gap-1">
                         <IconButton label="Sửa" onClick={() => startEdit(room)}>

@@ -4,7 +4,7 @@ import { CameraOff, ImagePlus, Loader2, X } from 'lucide-react'
 
 import { extractQrCode } from '../lib/qrCode.mjs'
 
-const INVALID_QR = 'Mã QR này không phải mã hiện vật của bảo tàng.'
+const INVALID_QR = 'Mã QR này không phải mã của bảo tàng.'
 
 function cameraErrorMessage(err) {
   if (typeof window !== 'undefined' && !window.isSecureContext) {
@@ -169,7 +169,7 @@ export default function QrScannerModal({ onClose, onDetected }) {
             )}
             {status === 'done' && (
               <p className="absolute inset-0 flex items-center justify-center gap-2 bg-navy-900/70 text-sm text-cream">
-                <Loader2 size={16} className="animate-spin" /> Đã đọc mã, đang mở hiện vật...
+                <Loader2 size={16} className="animate-spin" /> Đã đọc mã, đang mở điểm tham quan...
               </p>
             )}
             {notice && (
@@ -180,7 +180,7 @@ export default function QrScannerModal({ onClose, onDetected }) {
           </div>
 
           <p className="mt-3 text-sm text-ink-soft">
-            Đưa mã QR dán cạnh hiện vật vào giữa khung hình, giữ yên khoảng 1–2 giây.
+            Đưa mã QR dán tại điểm tham quan vào giữa khung hình, giữ yên khoảng 1–2 giây.
           </p>
 
           <div className="mt-4 flex flex-wrap items-center gap-2">

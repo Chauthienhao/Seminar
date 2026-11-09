@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { CircleMarker, MapContainer, Marker, Polygon, TileLayer, Tooltip, useMap, useMapEvents } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import './ArtifactMap.css';
-import { normalizeArtifacts, parseCoordinate } from './artifactMapData.mjs';
+import { normalizePois, parseCoordinate } from './artifactMapData.mjs';
 import {
   isInMuseum,
   MUSEUM_BOUNDS,
@@ -49,7 +49,7 @@ function ClickToPlace({ onPick }) {
 }
 
 /**
- * Admin control: click the map (or drag the pin) to set an artifact's position.
+ * Admin control: click the map (or drag the pin) to set a POI's position.
  * `lat` / `lng` are the form's raw values ('' when empty); `onChange` receives
  * numbers, or '' for both when the position is cleared.
  */
@@ -67,7 +67,7 @@ export default function LocationPicker({ lat, lng, onChange, excludeId = null, l
     let active = true;
     Promise.resolve()
       .then(loadOthers)
-      .then((items) => { if (active) setOthers(normalizeArtifacts(items)); })
+      .then((items) => { if (active) setOthers(normalizePois(items)); })
       .catch(() => {}); // the other pins are only a visual aid
     return () => { active = false; };
   }, [loadOthers]);
@@ -129,7 +129,7 @@ export default function LocationPicker({ lat, lng, onChange, excludeId = null, l
               ? 'Toạ độ chưa đủ (thiếu vĩ độ hoặc kinh độ). Bấm vào bản đồ để chọn lại.'
               : hasPosition
                 ? `Đã chọn vị trí (${parsedLat}, ${parsedLng}). Kéo ghim hoặc bấm chỗ khác để đổi.`
-                : 'Chưa chọn vị trí: bấm vào bản đồ tại nơi đặt hiện vật. Bỏ trống thì hiện vật không hiện trên bản đồ.'}
+                : 'Chưa chọn vị trí: bấm vào bản đồ tại nơi đặt điểm tham quan. Bỏ trống thì điểm này không hiện trên bản đồ.'}
         </p>
         {(hasPosition || partial) && (
           <button type="button" onClick={() => onChange({ lat: '', lng: '' })}

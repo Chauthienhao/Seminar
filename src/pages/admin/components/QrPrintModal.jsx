@@ -8,8 +8,8 @@ import Modal from './Modal.jsx'
 import { Button, ErrorBox } from './ui.jsx'
 
 /**
- * Ảnh QR KHÔNG lưu ở đâu cả: chỉ cột artifacts.qr_code được lưu, ảnh được vẽ lại từ link
- * <PUBLIC_URL>/q/<qr_code> mỗi lần mở. Cùng nội dung luôn ra cùng một mã, nên in lại bao nhiêu
+ * Ảnh QR KHÔNG lưu ở đâu cả: chỉ cột pois.code được lưu, ảnh được vẽ lại từ link
+ * <PUBLIC_URL>/q/<code> mỗi lần mở. Cùng nội dung luôn ra cùng một mã, nên in lại bao nhiêu
  * lần thì tờ QR đã dán ở bảo tàng vẫn đúng.
  */
 
@@ -51,7 +51,7 @@ function wrapText(ctx, text, maxWidth, maxLines) {
   return lines
 }
 
-/** Nhãn PNG để in/dán: mã QR + mã hiện vật (để khách gõ tay khi không quét được) + tên. */
+/** Nhãn PNG để in/dán: mã QR + mã điểm tham quan (để khách gõ tay khi không quét được) + tên điểm. */
 async function renderLabel(qrDataUrl, code, title) {
   const qr = await loadImage(qrDataUrl)
   const canvas = document.createElement('canvas')
@@ -114,12 +114,12 @@ export default function QrPrintModal({ code, title, onClose }) {
   }, [link, code, title])
 
   return (
-    <Modal title={`Mã QR hiện vật ${code}`} onClose={onClose} size="max-w-md">
+    <Modal title={`Mã QR điểm tham quan ${code}`} onClose={onClose} size="max-w-md">
       <ErrorBox message={error} />
 
       <div className="flex min-h-[260px] items-center justify-center rounded-xl border border-ink/10 bg-white p-3">
         {label ? (
-          <img src={label} alt={`Mã QR của hiện vật ${code}`} className="w-full max-w-[280px]" />
+          <img src={label} alt={`Mã QR của điểm tham quan ${code}`} className="w-full max-w-[280px]" />
         ) : (
           !error && <Loader2 size={20} className="animate-spin text-ink-soft" />
         )}
@@ -134,7 +134,7 @@ export default function QrPrintModal({ code, title, onClose }) {
           <TriangleAlert size={16} className="shrink-0" />
           <span>
             Link đang dùng địa chỉ <strong>localhost</strong>: chỉ mở được trên máy này. Quét bằng nút “Quét mã QR”
-            trên website vẫn đúng hiện vật, nhưng camera điện thoại sẽ không mở được. Trước khi in để dán thật, đặt{' '}
+            trên website vẫn đúng điểm tham quan, nhưng camera điện thoại sẽ không mở được. Trước khi in để dán thật, đặt{' '}
             <code>VITE_PUBLIC_URL</code> trong file <code>.env</code> là địa chỉ website thật.
           </span>
         </p>

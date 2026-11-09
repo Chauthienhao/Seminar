@@ -1,8 +1,8 @@
 """
 Tầng truy xuất dữ liệu cho Room. Tách riêng khỏi artifact_repo.py vì được dùng
-chủ yếu bởi map_service.py (sơ đồ tầng, danh sách phòng), không phải audio_service.py.
+chủ yếu bởi map_service.py (danh sách phòng, kiểm tra phòng của POI), không phải audio_service.py.
 """
-from sqlalchemy.orm import Session, joinedload
+from sqlalchemy.orm import Session
 
 from domain.entities import Room
 
@@ -14,7 +14,6 @@ class RoomRepository:
     def get_by_id(self, room_id: str) -> Room | None:
         return (
             self.db.query(Room)
-            .options(joinedload(Room.artifacts))
             .filter(Room.id == room_id)
             .first()
         )

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Headphones, Clock3, Landmark, DoorOpen, Route as RouteIcon } from 'lucide-react'
+import { Headphones, Clock3, Landmark, DoorOpen, MapPin, Route as RouteIcon } from 'lucide-react'
 
 import { api } from '../../lib/api.js'
 import { adminApi } from '../../lib/adminApi.js'
@@ -15,9 +15,9 @@ export default function AdminOverview({ me }) {
   const [error, setError] = useState(null)
 
   useEffect(() => {
-    Promise.all([adminApi.listArtifacts(), api.listRooms(), adminApi.listTours(), adminApi.topPlayed(5)])
-      .then(([artifacts, rooms, tours, top]) => {
-        setCounts({ artifacts: artifacts.length, rooms: rooms.length, tours: tours.length })
+    Promise.all([adminApi.listArtifacts(), adminApi.listPois(), api.listRooms(), adminApi.listTours(), adminApi.topPlayed(5)])
+      .then(([artifacts, pois, rooms, tours, top]) => {
+        setCounts({ artifacts: artifacts.length, pois: pois.length, rooms: rooms.length, tours: tours.length })
         setStats(top)
       })
       .catch((err) => setError(err.message))
@@ -31,6 +31,7 @@ export default function AdminOverview({ me }) {
       icon: Landmark,
       to: '/admin/hien-vat',
     },
+    { label: 'Điểm tham quan', value: counts.pois, icon: MapPin, to: '/admin/diem' },
     { label: 'Phòng trưng bày', value: counts.rooms, icon: DoorOpen, to: '/admin/phong' },
     { label: 'Tuyến tham quan', value: counts.tours, icon: RouteIcon, to: '/admin/tour' },
   ]
@@ -48,7 +49,7 @@ export default function AdminOverview({ me }) {
       ) : (
         <>
           {cards && (
-            <div className="grid gap-4 sm:grid-cols-3">
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               {cards.map(({ label, value, icon: Icon, to }) => (
                 <Link
                   key={label}

@@ -3,8 +3,9 @@ Pydantic schemas — định dạng dữ liệu vào/ra của API (tách biệt 
 Gộp chung 1 file cho gọn theo đúng cấu trúc thư mục domain/ đã chọn.
 """
 from datetime import datetime
+from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict
 
 
 # ---------- Room ----------
@@ -61,53 +62,81 @@ class ArtifactTranslationAdminOut(ArtifactTranslationIn):
     id: str
 
 
-# ---------- Artifact ----------
+# ---------- POI (điểm tham quan) ----------
 
-class ArtifactCreate(BaseModel):
-    qr_code: str
+PoiType = Literal["EXHIBIT", "ENTRANCE", "INFO_DESK", "EXIT"]
+
+
+class PoiCreate(BaseModel):
+    code: str  # mã in trong QR — không sửa được sau khi tạo (các tờ QR đã in trỏ vào mã này)
     room_id: str
+    poi_type: PoiType = "EXHIBIT"
+    name_vi: str
+    name_en: str
+    description_vi: str | None = None
+    description_en: str | None = None
     lat: float | None = None
     lng: float | None = None
     geofence_radius: int = 10
+
+
+class PoiUpdate(BaseModel):
+    room_id: str | None = None  # bỏ trống = giữ phòng cũ; gửi null tường minh sẽ bị từ chối
+    poi_type: PoiType | None = None
+    name_vi: str | None = None
+    name_en: str | None = None
+    description_vi: str | None = None
+    description_en: str | None = None
+    lat: float | None = None
+    lng: float | None = None
+    geofence_radius: int | None = None
+
+
+class PoiOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: str
+    code: str
+    room_id: str
+    poi_type: str
+    name_vi: str
+    name_en: str
+    description_vi: str | None = None
+    description_en: str | None = None
+    lat: float | None = None
+    lng: float | None = None
+    geofence_radius: int | None = None
+    room: RoomOut | None = None
+
+
+# ---------- Artifact ----------
+
+class ArtifactCreate(BaseModel):
+    code: str
+    poi_id: str
     image_url: str | None = None
     period: str | None = None
     translations: list[ArtifactTranslationIn] = []
 
 
 class ArtifactUpdate(BaseModel):
-    room_id: str | None = None  # bỏ trống = giữ phòng cũ; gửi null tường minh sẽ bị từ chối
-    lat: float | None = None
-    lng: float | None = None
-    geofence_radius: int | None = None
+    poi_id: str | None = None  # bỏ trống = giữ POI cũ; gửi null tường minh sẽ bị từ chối
     image_url: str | None = None
     period: str | None = None
 
 
 class ArtifactSummary(BaseModel):
-    """Dạng rút gọn — dùng cho danh sách tra cứu / tìm kiếm (trang ArtifactLookup)."""
+    """Dạng rút gọn — dùng cho danh sách tra cứu, danh sách hiện vật tại một POI, popup bản đồ."""
 
     id: str
-    qr_code: str
+    code: str
     title: str
     period: str | None = None
     image_url: str | None = None
+    description: str | None = None  # chỉ điền ở popup bản đồ (đoạn đầu của transcript)
 
 
-class ArtifactMapPoint(BaseModel):
-    """One real artifact with geographic coordinates and popup information."""
-
-    id: str
-    qr_code: str
-    title: str
-    image_url: str | None = None
-    room: RoomOut | None = None
-    description: str | None = None
-    lat: float = Field(ge=-90, le=90, allow_inf_nan=False)
-    lng: float = Field(ge=-180, le=180, allow_inf_nan=False)
-
-
-class RoomDetail(RoomOut):
-    """Chi tiết phòng kèm danh sách hiện vật — dùng cho sơ đồ mặt bằng (MuseumMap.jsx)."""
+class PoiDetail(PoiOut):
+    """POI kèm các hiện vật đặt tại đó — dùng khi quét QR, trên bản đồ, trong tour và CMS."""
 
     artifacts: list[ArtifactSummary] = []
 
@@ -116,12 +145,10 @@ class ArtifactDetail(BaseModel):
     """Chi tiết đầy đủ — dùng cho trang ArtifactDetail, đã resolve theo 1 ngôn ngữ."""
 
     id: str
-    qr_code: str
+    code: str
     image_url: str | None = None
     period: str | None = None
-    lat: float | None = None
-    lng: float | None = None
-    geofence_radius: int
+    poi: PoiOut
     room: RoomOut | None = None
     translation: ArtifactTranslationOut
     available_languages: list[str]
@@ -132,13 +159,11 @@ class ArtifactAdminOut(BaseModel):
 
     model_config = ConfigDict(from_attributes=True)
     id: str
-    qr_code: str
-    room_id: str | None = None
-    lat: float | None = None
-    lng: float | None = None
-    geofence_radius: int | None = None
+    code: str
+    poi_id: str
     image_url: str | None = None
     period: str | None = None
+    poi: PoiOut | None = None
     room: RoomOut | None = None
     translations: list[ArtifactTranslationAdminOut] = []
 
@@ -152,7 +177,7 @@ class TourCreate(BaseModel):
     description_en: str | None = None
     duration_minutes: int | None = None
     thumbnail_url: str | None = None
-    artifact_ids_in_order: list[str] = []  # thứ tự trong list = step_order
+    poi_ids_in_order: list[str] = []  # thứ tự trong list = step_order
 
 
 class TourSummary(BaseModel):
@@ -166,7 +191,7 @@ class TourSummary(BaseModel):
 
 class TourStop(BaseModel):
     step_order: int
-    artifact: ArtifactSummary
+    poi: PoiDetail
 
 
 class TourDetail(TourSummary):
@@ -181,7 +206,7 @@ class TourUpdate(BaseModel):
     duration_minutes: int | None = None
     thumbnail_url: str | None = None
     # None = giữ nguyên lộ trình; gửi list (kể cả list rỗng) = thay toàn bộ lộ trình theo thứ tự mới
-    artifact_ids_in_order: list[str] | None = None
+    poi_ids_in_order: list[str] | None = None
 
 
 class TourAdminOut(BaseModel):
@@ -211,6 +236,7 @@ class PlayLogOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: str
     artifact_id: str | None
+    poi_id: str | None
     session_id: str
     trigger_method: str
     language_played: str

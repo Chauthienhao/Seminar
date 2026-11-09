@@ -1,5 +1,5 @@
 """
-Router CMS — quản trị hiện vật/tuyến tham quan/phòng, xem thống kê.
+Router CMS — quản trị hiện vật/điểm tham quan (POI)/tuyến tham quan/phòng, xem thống kê.
 Toàn bộ endpoint (trừ /admin/login) yêu cầu JWT hợp lệ qua `get_current_user`.
 """
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
@@ -18,6 +18,9 @@ from domain.schemas import (
     ArtifactTranslationUpdate,
     ArtifactUpdate,
     LoginRequest,
+    PoiCreate,
+    PoiDetail,
+    PoiUpdate,
     RoomCreate,
     RoomOut,
     RoomUpdate,
@@ -55,7 +58,7 @@ def get_me(current_user: UserOut = Depends(get_current_user)):
 
 @router.get("/artifacts", response_model=list[ArtifactAdminOut])
 def list_artifacts_for_admin(
-    q: str | None = Query(None, description="Tìm theo mã QR hoặc tiêu đề (mọi ngôn ngữ)"),
+    q: str | None = Query(None, description="Tìm theo mã hiện vật hoặc tiêu đề (mọi ngôn ngữ)"),
     skip: int = 0,
     limit: int = Query(50, le=200),
     db: Session = Depends(get_db),
@@ -224,9 +227,65 @@ def delete_room(
     db: Session = Depends(get_db),
     _: UserOut = Depends(get_current_user),
 ):
-    """Phòng còn hiện vật sẽ bị từ chối (409) — phải chuyển hoặc xoá hết hiện vật trước."""
+    """Phòng còn POI sẽ bị từ chối (409) — phải chuyển hoặc xoá hết POI trước."""
     try:
         MapService(db).delete_room(room_id)
+    except NotFoundError as e:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail=str(e))
+    except ConflictError as e:
+        raise HTTPException(status.HTTP_409_CONFLICT, detail=str(e))
+
+
+# ---------- Quản trị điểm tham quan (POI) ----------
+
+@router.get("/pois", response_model=list[PoiDetail])
+def list_pois_for_admin(
+    db: Session = Depends(get_db),
+    _: UserOut = Depends(get_current_user),
+):
+    """Mọi POI (kể cả POI chưa có GPS) kèm các hiện vật đặt tại đó."""
+    return MapService(db).list_pois()
+
+
+@router.post("/pois", response_model=PoiDetail, status_code=status.HTTP_201_CREATED)
+def create_poi(
+    payload: PoiCreate,
+    db: Session = Depends(get_db),
+    _: UserOut = Depends(get_current_user),
+):
+    try:
+        return MapService(db).create_poi(payload)
+    except ConflictError as e:
+        raise HTTPException(status.HTTP_409_CONFLICT, detail=str(e))
+    except InvalidDataError as e:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+
+@router.put("/pois/{poi_id}", response_model=PoiDetail)
+def update_poi(
+    poi_id: str,
+    payload: PoiUpdate,
+    db: Session = Depends(get_db),
+    _: UserOut = Depends(get_current_user),
+):
+    """Mã POI (in trên QR) không sửa được — PoiUpdate không có trường `code`."""
+    try:
+        return MapService(db).update_poi(poi_id, payload)
+    except NotFoundError as e:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail=str(e))
+    except InvalidDataError as e:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+
+@router.delete("/pois/{poi_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_poi(
+    poi_id: str,
+    db: Session = Depends(get_db),
+    _: UserOut = Depends(get_current_user),
+):
+    """POI còn hiện vật sẽ bị từ chối (409) — phải chuyển hoặc xoá hết hiện vật trước."""
+    try:
+        MapService(db).delete_poi(poi_id)
     except NotFoundError as e:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail=str(e))
     except ConflictError as e:
@@ -242,18 +301,6 @@ def list_tours_for_admin(
 ):
     """Khác /api/tours phía khách: trả cả tiêu đề/mô tả vi + en để đổ vào form sửa."""
     return MapService(db).list_tours_for_admin()
-
-
-@router.get("/tours/{tour_id}", response_model=TourAdminOut)
-def get_tour_for_admin(
-    tour_id: str,
-    db: Session = Depends(get_db),
-    _: UserOut = Depends(get_current_user),
-):
-    try:
-        return MapService(db).get_tour_for_admin(tour_id)
-    except NotFoundError as e:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, detail=str(e))
 
 
 @router.post("/tours", response_model=TourDetail, status_code=status.HTTP_201_CREATED)
@@ -276,7 +323,7 @@ def update_tour(
     _: UserOut = Depends(get_current_user),
 ):
     """
-    Gửi `artifact_ids_in_order` để sắp xếp lại / thêm / bớt điểm dừng (thứ tự trong list
+    Gửi `poi_ids_in_order` để sắp xếp lại / thêm / bớt điểm dừng (thứ tự trong list
     = step_order). Bỏ trống trường này nếu chỉ sửa tiêu đề, mô tả...
     """
     try:

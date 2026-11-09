@@ -10,53 +10,61 @@ export function parseCoordinate(value, limit) {
 }
 
 const text = value => typeof value === 'string' ? value.trim() : '';
+const isObject = value => Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+const validId = id => (typeof id === 'string' || (typeof id === 'number' && Number.isFinite(id))) && String(id).trim();
 
-export function normalizeArtifacts(input) {
+function normalizeArtifact(item) {
+  const id = isObject(item) && validId(item.id);
+  if (!id) return null;
+  return {
+    id: String(item.id).trim(),
+    code: text(item.code),
+    title: text(item.title) || 'Hiện vật',
+    image_url: text(item.image_url) || null,
+    description: text(item.description) || null,
+  };
+}
+
+/**
+ * Mỗi POI (điểm tham quan) có GPS hợp lệ là một ghim. Hiện vật đặt tại POI nằm trong
+ * `artifacts`; POI không có hiện vật (lối vào, quầy thông tin) vẫn được giữ lại.
+ * `title` = tên POI, dùng cho tooltip và ghim mờ trong LocationPicker.
+ */
+export function normalizePois(input) {
   if (!Array.isArray(input)) return [];
   const seen = new Set();
-  const artifacts = [];
+  const pois = [];
   for (const item of input) {
-    if (!item || typeof item !== 'object' || Array.isArray(item)) continue;
-    if (typeof item.id !== 'string' && typeof item.id !== 'number') continue;
-    if (typeof item.id === 'number' && !Number.isFinite(item.id)) continue;
+    if (!isObject(item) || !validId(item.id)) continue;
     const id = String(item.id).trim();
     const lat = parseCoordinate(item.lat, 90);
     const lng = parseCoordinate(item.lng, 180);
     // A later valid entry may replace an earlier invalid entry for the same ID.
-    if (!id || lat === null || lng === null || seen.has(id)) continue;
+    if (lat === null || lng === null || seen.has(id)) continue;
     seen.add(id);
-    const room = item.room && typeof item.room === 'object' && !Array.isArray(item.room)
+    const room = isObject(item.room)
       ? { id: item.room.id, code: text(item.room.code), name_vi: text(item.room.name_vi), name_en: text(item.room.name_en) }
       : null;
-    artifacts.push({
+    pois.push({
       id,
-      qr_code: text(item.qr_code),
-      title: text(item.title) || 'Hiện vật',
-      image_url: text(item.image_url) || null,
+      code: text(item.code),
+      title: text(item.name_vi) || text(item.code) || 'Điểm tham quan',
+      poi_type: text(item.poi_type) || 'EXHIBIT',
+      description: text(item.description_vi) || null,
       room,
-      description: text(item.description) || null,
+      artifacts: Array.isArray(item.artifacts) ? item.artifacts.map(normalizeArtifact).filter(Boolean) : [],
       lat,
       lng,
     });
   }
-  return artifacts;
+  return pois;
 }
 
-export const coordinateKey = artifact => `${artifact.lat},${artifact.lng}`;
-
-export function groupArtifactsByCoordinate(artifacts) {
-  const groups = new Map();
-  for (const artifact of artifacts) {
-    const key = coordinateKey(artifact);
-    if (!groups.has(key)) groups.set(key, []);
-    groups.get(key).push(artifact);
-  }
-  return groups;
-}
+export const coordinateKey = point => `${point.lat},${point.lng}`;
 
 /** Selection, descriptions, and response ordering do not affect the viewport. */
-export function coordinateSignature(artifacts) {
-  return [...new Set(artifacts.map(coordinateKey))].sort().join('|');
+export function coordinateSignature(points) {
+  return [...new Set(points.map(coordinateKey))].sort().join('|');
 }
 
 export function shortDescription(value, limit = 220) {

@@ -10,11 +10,10 @@ from core.database import get_db
 from core.exceptions import NotFoundError
 from domain.schemas import (
     ArtifactDetail,
-    ArtifactMapPoint,
     ArtifactSummary,
     PlayLogCreate,
     PlayLogOut,
-    RoomDetail,
+    PoiDetail,
     RoomOut,
     TourDetail,
     TourSummary,
@@ -29,7 +28,7 @@ router = APIRouter(tags=["visitor"])
 
 @router.get("/artifacts", response_model=list[ArtifactSummary])
 def search_artifacts(
-    q: str | None = Query(None, description="Từ khoá tìm theo mã QR hoặc tên hiện vật"),
+    q: str | None = Query(None, description="Từ khoá tìm theo mã hoặc tên hiện vật"),
     lang: str = Depends(get_language),
     skip: int = 0,
     limit: int = 20,
@@ -39,13 +38,11 @@ def search_artifacts(
     return AudioService(db).search(q, lang, skip, limit)
 
 
-@router.get("/artifacts/lookup/{qr_code}", response_model=ArtifactDetail)
-def lookup_artifact_by_qr(qr_code: str, lang: str = Depends(get_language), db: Session = Depends(get_db)):
-    """
-    Luồng chính: quét mã QR (mobile) hoặc nhập mã thủ công (web) -> trả về chi tiết + audio.
-    """
+@router.get("/artifacts/lookup/{code}", response_model=ArtifactDetail)
+def lookup_artifact_by_code(code: str, lang: str = Depends(get_language), db: Session = Depends(get_db)):
+    """Nhập mã hiện vật thủ công trên trang Tra cứu -> trả về chi tiết + audio."""
     try:
-        return AudioService(db).lookup_by_qr_code(qr_code, lang)
+        return AudioService(db).lookup_by_code(code, lang)
     except NotFoundError as e:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail=str(e))
 
@@ -75,35 +72,41 @@ def list_rooms(db: Session = Depends(get_db)):
     return MapService(db).list_rooms()
 
 
-@router.get("/rooms/{room_id}", response_model=RoomDetail)
-def get_room(room_id: str, lang: str = Depends(get_language), db: Session = Depends(get_db)):
-    try:
-        return MapService(db).get_room(room_id, lang)
-    except NotFoundError as e:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, detail=str(e))
-
-
-@router.get("/map/artifacts", response_model=list[ArtifactMapPoint])
-def list_artifact_positions(
+@router.get("/map/pois", response_model=list[PoiDetail])
+def list_map_pois(
     lang: str = Depends(get_language),
     db: Session = Depends(get_db),
 ):
-    """All real artifact markers with valid GPS and popup information."""
-    return MapService(db).list_artifact_positions(lang)
+    """Mọi POI có GPS hợp lệ (mỗi POI một ghim) kèm các hiện vật đặt tại đó."""
+    return MapService(db).list_map_pois(lang)
 
 
-@router.get("/map/nearby", response_model=ArtifactSummary | None)
-def find_nearby_artifact(
+@router.get("/map/nearby", response_model=PoiDetail | None)
+def find_nearby_poi(
     lat: float,
     lng: float,
     lang: str = Depends(get_language),
     db: Session = Depends(get_db),
 ):
     """
-    Dành cho bản mobile (React Native) sau này: tự động phát hiện hiện vật gần nhất
+    Dành cho bản mobile (React Native) sau này: tự động phát hiện POI gần nhất
     dựa trên GPS (trigger_method = 'GEOFENCE'), không cần khách quét QR thủ công.
     """
-    return MapService(db).find_nearest_artifact(lat, lng, lang)
+    return MapService(db).find_nearest_poi(lat, lng, lang)
+
+
+# ---------- Điểm tham quan (POI) ----------
+
+@router.get("/pois/lookup/{code}", response_model=PoiDetail)
+def lookup_poi_by_code(code: str, lang: str = Depends(get_language), db: Session = Depends(get_db)):
+    """
+    Luồng chính khi quét mã QR (link /q/<code>): trả về POI và các hiện vật tại đó.
+    Frontend tự chuyển thẳng sang hiện vật nếu POI chỉ có một hiện vật.
+    """
+    try:
+        return MapService(db).lookup_poi(code, lang)
+    except NotFoundError as e:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail=str(e))
 
 
 # ---------- Tuyến tham quan ----------

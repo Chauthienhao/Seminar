@@ -133,16 +133,25 @@ export default function ToursCollections() {
                     )}
                     {loadingStops !== tour.id && (stopsByTour[tour.id]?.length ?? 0) > 0 && (
                       <ol className="space-y-2">
-                        {stopsByTour[tour.id].map((stop) => (
-                          <li key={stop.artifact.id}>
+                        {stopsByTour[tour.id].map(({ step_order, poi }) => (
+                          <li key={poi.id}>
+                            {/* Mỗi điểm dừng là một POI: có 1 hiện vật thì mở thẳng hiện vật, còn lại mở trang POI */}
                             <NavLink
-                              to={`/hien-vat/${stop.artifact.id}`}
+                              to={
+                                poi.artifacts.length === 1
+                                  ? `/hien-vat/${poi.artifacts[0].id}`
+                                  : `/diem/${encodeURIComponent(poi.code)}`
+                              }
                               className="flex items-center gap-3 rounded-lg px-2 py-1.5 text-sm hover:bg-paper"
                             >
                               <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-maroon/10 text-[11px] font-semibold text-maroon">
-                                {stop.step_order}
+                                {step_order}
                               </span>
-                              <span className="font-medium text-ink">{stop.artifact.title}</span>
+                              <span className="font-medium text-ink">{poi.name_vi}</span>
+                              {poi.room && <span className="text-xs text-ink-soft">{poi.room.name_vi}</span>}
+                              {poi.artifacts.length > 1 && (
+                                <span className="text-xs text-ink-soft">· {poi.artifacts.length} hiện vật</span>
+                              )}
                             </NavLink>
                           </li>
                         ))}

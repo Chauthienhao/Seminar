@@ -44,7 +44,7 @@ export default function ToursAdmin() {
   const handleDelete = async (tour) => {
     const ok = await confirm({
       title: `Xoá tour “${tour.title_vi}”?`,
-      message: 'Chỉ xoá tuyến tham quan, các hiện vật trong lộ trình vẫn giữ nguyên.',
+      message: 'Chỉ xoá tuyến tham quan, các điểm tham quan (POI) trong lộ trình vẫn giữ nguyên.',
     })
     if (!ok) return
     try {
@@ -60,7 +60,7 @@ export default function ToursAdmin() {
     <div className="max-w-5xl">
       <PageHeader
         title="Tuyến tham quan"
-        description="Các tour gợi ý cho khách: thông tin song ngữ và thứ tự các điểm dừng."
+        description="Các tour gợi ý cho khách: thông tin song ngữ và thứ tự các điểm tham quan (POI) cần đi qua."
         action={
           <Button onClick={() => setEditing('new')}>
             <Plus size={16} /> Thêm tour
@@ -146,30 +146,29 @@ const tourForm = (t) => ({
 function TourModal({ tour, onClose, onSaved }) {
   const isNew = !tour
   const [form, setForm] = useState(tourForm(tour))
-  // Mỗi điểm dừng: { id, qr_code, title } — thứ tự trong mảng = thứ tự tham quan
-  const [stops, setStops] = useState(tour ? tour.stops.map((s) => s.artifact) : [])
-  const [artifacts, setArtifacts] = useState([])
+  // Mỗi điểm dừng là một POI: { id, code, name_vi, artifacts } — thứ tự trong mảng = thứ tự tham quan
+  const [stops, setStops] = useState(tour ? tour.stops.map((s) => s.poi) : [])
+  const [pois, setPois] = useState([])
   const [pickId, setPickId] = useState('')
   const [saving, setSaving] = useState(false)
   const toast = useToast()
 
   useEffect(() => {
     adminApi
-      .listArtifacts()
-      .then(setArtifacts)
+      .listPois()
+      .then(setPois)
       .catch((err) => toast.error(err.message))
   }, [toast])
 
   const set = (field) => (e) => setForm({ ...form, [field]: e.target.value })
   const valid = form.title_vi.trim() && form.title_en.trim()
 
-  const viTitle = (a) => a.translations.find((t) => t.language_code === 'vi')?.title || a.translations[0]?.title || ''
-  const available = artifacts.filter((a) => !stops.some((s) => s.id === a.id))
+  const available = pois.filter((p) => !stops.some((s) => s.id === p.id))
 
   const addStop = () => {
-    const a = artifacts.find((x) => x.id === pickId)
-    if (!a) return
-    setStops([...stops, { id: a.id, qr_code: a.qr_code, title: viTitle(a) }])
+    const poi = pois.find((x) => x.id === pickId)
+    if (!poi) return
+    setStops([...stops, poi])
     setPickId('')
   }
   const move = (index, delta) => {
@@ -190,7 +189,7 @@ function TourModal({ tour, onClose, onSaved }) {
       description_en: toTextOrNull(form.description_en),
       duration_minutes: toNumberOrNull(form.duration_minutes),
       thumbnail_url: toTextOrNull(form.thumbnail_url),
-      artifact_ids_in_order: stops.map((s) => s.id),
+      poi_ids_in_order: stops.map((s) => s.id),
     }
     try {
       if (isNew) {
@@ -238,7 +237,7 @@ function TourModal({ tour, onClose, onSaved }) {
 
         {stops.length === 0 ? (
           <p className="rounded-lg border border-dashed border-ink/20 px-4 py-5 text-center text-sm text-ink-soft">
-            Chưa có điểm dừng nào. Chọn hiện vật bên dưới để thêm vào lộ trình.
+            Chưa có điểm dừng nào. Chọn điểm tham quan (POI) bên dưới để thêm vào lộ trình.
           </p>
         ) : (
           <ol className="divide-y divide-ink/10 rounded-xl border border-ink/10 bg-paper">
@@ -248,8 +247,9 @@ function TourModal({ tour, onClose, onSaved }) {
                   {i + 1}
                 </span>
                 <span className="min-w-0 flex-1 truncate">
-                  <span className="font-semibold text-ink">{s.qr_code}</span>
-                  <span className="text-ink-soft"> — {s.title}</span>
+                  <span className="font-semibold text-ink">{s.code}</span>
+                  <span className="text-ink-soft"> — {s.name_vi}</span>
+                  {s.artifacts.length > 0 && <span className="text-xs text-ink-soft"> · {s.artifacts.length} hiện vật</span>}
                 </span>
                 <IconButton label="Đưa lên" onClick={() => move(i, -1)} disabled={i === 0}>
                   <ArrowUp size={15} />
@@ -268,11 +268,11 @@ function TourModal({ tour, onClose, onSaved }) {
         <div className="mt-3 flex gap-2">
           <select className={inputClass} value={pickId} onChange={(e) => setPickId(e.target.value)}>
             <option value="">
-              {available.length === 0 ? '— Không còn hiện vật nào để thêm —' : '— Chọn hiện vật để thêm vào lộ trình —'}
+              {available.length === 0 ? '— Không còn POI nào để thêm —' : '— Chọn điểm tham quan (POI) để thêm vào lộ trình —'}
             </option>
-            {available.map((a) => (
-              <option key={a.id} value={a.id}>
-                {a.qr_code} — {viTitle(a)}
+            {available.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.code} — {p.name_vi}
               </option>
             ))}
           </select>

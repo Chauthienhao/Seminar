@@ -33,11 +33,12 @@ from domain.schemas import (
     ArtifactUpdate,
     PlayLogCreate,
     PlayLogOut,
+    PoiOut,
     RoomOut,
 )
 from repositories.artifact_repo import ArtifactRepository
 from repositories.play_log_repo import PlayLogRepository
-from repositories.room_repo import RoomRepository
+from repositories.poi_repo import PoiRepository
 from services.upload_service import delete_uploaded_file
 
 SUPPORTED_LANGUAGES = ("vi", "en")
@@ -48,7 +49,7 @@ class AudioService:
         self.db = db
         self.artifacts = ArtifactRepository(db)
         self.play_logs = PlayLogRepository(db)
-        self.rooms = RoomRepository(db)
+        self.pois = PoiRepository(db)
 
     # ---------- Đọc dữ liệu cho khách tham quan ----------
 
@@ -58,11 +59,11 @@ class AudioService:
             raise NotFoundError(f"Không tìm thấy hiện vật id={artifact_id}")
         return self._to_detail(artifact, language_code)
 
-    def lookup_by_qr_code(self, qr_code: str, language_code: str = "vi") -> ArtifactDetail:
-        """Luồng chính khi quét mã QR (mobile) hoặc nhập mã thủ công (web)."""
-        artifact = self.artifacts.get_by_qr_code(qr_code)
+    def lookup_by_code(self, code: str, language_code: str = "vi") -> ArtifactDetail:
+        """Nhập mã hiện vật thủ công trên trang Tra cứu (quét QR thì tra theo mã POI — xem MapService)."""
+        artifact = self.artifacts.get_by_code(code)
         if artifact is None:
-            raise NotFoundError(f"Không tìm thấy hiện vật với mã '{qr_code}'")
+            raise NotFoundError(f"Không tìm thấy hiện vật với mã '{code}'")
         return self._to_detail(artifact, language_code)
 
     def search(self, query: str | None, language_code: str = "vi", skip: int = 0, limit: int = 20) -> list[ArtifactSummary]:
@@ -79,6 +80,7 @@ class AudioService:
         log = PlayLog(
             id=str(uuid.uuid4()),
             artifact_id=payload.artifact_id,
+            poi_id=artifact.poi_id,  # hiện vật đang đặt ở POI nào lúc nghe
             session_id=payload.session_id,
             trigger_method=payload.trigger_method,
             language_played=payload.language_played,
@@ -94,17 +96,14 @@ class AudioService:
     # ---------- CMS: quản trị hiện vật ----------
 
     def create_artifact(self, payload: ArtifactCreate) -> ArtifactDetail:
-        if self.artifacts.get_by_qr_code(payload.qr_code) is not None:
-            raise ConflictError(f"Mã QR '{payload.qr_code}' đã tồn tại")
-        self._validate_room(payload.room_id)
+        if self.artifacts.get_by_code(payload.code) is not None:
+            raise ConflictError(f"Mã hiện vật '{payload.code}' đã tồn tại")
+        self._validate_poi(payload.poi_id)
 
         artifact = Artifact(
             id=str(uuid.uuid4()),
-            qr_code=payload.qr_code,
-            room_id=payload.room_id,
-            lat=payload.lat,
-            lng=payload.lng,
-            geofence_radius=payload.geofence_radius,
+            code=payload.code,
+            poi_id=payload.poi_id,
             image_url=payload.image_url,
             period=payload.period,
         )
@@ -131,8 +130,8 @@ class AudioService:
             raise NotFoundError(f"Không tìm thấy hiện vật id={artifact_id}")
 
         fields = payload.model_dump(exclude_unset=True)
-        if "room_id" in fields:
-            self._validate_room(fields["room_id"])
+        if "poi_id" in fields:
+            self._validate_poi(fields["poi_id"])
 
         old_image_url = artifact.image_url
         for field, value in fields.items():
@@ -195,12 +194,12 @@ class AudioService:
 
     # ---------- Nội bộ ----------
 
-    def _validate_room(self, room_id: str | None) -> None:
-        """Mỗi hiện vật bắt buộc thuộc một phòng đang tồn tại (artifacts.room_id NOT NULL + khoá ngoại)."""
-        if not room_id:
-            raise InvalidDataError("Hiện vật bắt buộc phải thuộc một phòng")
-        if self.rooms.get_by_id(room_id) is None:
-            raise InvalidDataError(f"Không tìm thấy phòng id={room_id}")
+    def _validate_poi(self, poi_id: str | None) -> None:
+        """Mỗi hiện vật bắt buộc đặt tại một POI đang tồn tại (artifacts.poi_id NOT NULL + khoá ngoại)."""
+        if not poi_id:
+            raise InvalidDataError("Hiện vật bắt buộc phải đặt tại một điểm tham quan (POI)")
+        if self.pois.get_by_id(poi_id) is None:
+            raise InvalidDataError(f"Không tìm thấy POI id={poi_id}")
 
     def _get_translation_or_raise(self, artifact_id: str, language_code: str) -> ArtifactTranslation:
         translation = self.artifacts.get_translation(artifact_id, language_code)
@@ -215,7 +214,7 @@ class AudioService:
         # Không có đúng ngôn ngữ yêu cầu -> lấy bản đầu tiên có sẵn (fallback mềm)
         if artifact.translations:
             return artifact.translations[0]
-        raise NotFoundError(f"Hiện vật '{artifact.qr_code}' chưa có nội dung thuyết minh nào")
+        raise NotFoundError(f"Hiện vật '{artifact.code}' chưa có nội dung thuyết minh nào")
 
     def _resolve_audio(self, translation: ArtifactTranslation) -> ArtifactTranslationOut:
         """
@@ -238,12 +237,10 @@ class AudioService:
         translation = self._pick_translation(artifact, language_code)
         return ArtifactDetail(
             id=artifact.id,
-            qr_code=artifact.qr_code,
+            code=artifact.code,
             image_url=artifact.image_url,
             period=artifact.period,
-            lat=artifact.lat,
-            lng=artifact.lng,
-            geofence_radius=artifact.geofence_radius,
+            poi=PoiOut.model_validate(artifact.poi),
             room=RoomOut.model_validate(artifact.room) if artifact.room else None,
             translation=self._resolve_audio(translation),
             available_languages=sorted({t.language_code for t in artifact.translations}),
@@ -253,7 +250,7 @@ class AudioService:
         translation = self._pick_translation(artifact, language_code)
         return ArtifactSummary(
             id=artifact.id,
-            qr_code=artifact.qr_code,
+            code=artifact.code,
             title=translation.title,
             period=artifact.period,
             image_url=artifact.image_url,

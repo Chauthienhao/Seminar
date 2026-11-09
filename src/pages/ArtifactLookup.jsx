@@ -42,8 +42,8 @@ export default function ArtifactLookup() {
     setSubmitting(true)
     setLookupError(null)
     try {
-      // Thử tra cứu CHÍNH XÁC theo mã QR trước (GET /api/artifacts/lookup/{code})
-      const artifact = await api.lookupArtifactByQrCode(code, 'vi')
+      // Thử tra cứu CHÍNH XÁC theo mã hiện vật trước (GET /api/artifacts/lookup/{code})
+      const artifact = await api.lookupArtifactByCode(code, 'vi')
       navigate(`/hien-vat/${artifact.id}`)
     } catch (err) {
       if (err instanceof ApiError && err.status === 404) {
@@ -104,7 +104,7 @@ export default function ArtifactLookup() {
         <div>
           <p className="text-sm font-semibold text-ink">Đang tham quan tại bảo tàng?</p>
           <p className="mt-1.5 text-sm leading-relaxed text-ink-soft">
-            Mỗi hiện vật có một mã QR dán bên cạnh. Quét bằng <strong className="text-ink">camera điện thoại</strong>{' '}
+            Mỗi điểm tham quan có một mã QR dán bên cạnh. Quét bằng <strong className="text-ink">camera điện thoại</strong>{' '}
             để mở thẳng trang thuyết minh, hoặc bấm{' '}
             <button type="button" onClick={() => setScannerOpen(true)} className="font-semibold text-maroon underline-offset-2 hover:underline">
               Quét mã QR
@@ -153,7 +153,7 @@ export default function ArtifactLookup() {
                   )}
                   <div>
                     <p className="text-xs font-semibold uppercase tracking-wide text-ink-soft">
-                      {a.qr_code}
+                      {a.code}
                       {a.period ? ` · ${a.period}` : ''}
                     </p>
                     <p className="mt-1 font-serif text-base font-semibold text-ink">{a.title}</p>

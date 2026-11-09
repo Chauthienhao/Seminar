@@ -1,11 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { ExternalLink, Loader2, Pencil, Plus, QrCode, Search, Square, Trash2, Upload, Volume2 } from 'lucide-react'
+import { ExternalLink, Loader2, Pencil, Plus, Search, Square, Trash2, Upload, Volume2 } from 'lucide-react'
 
 import { api } from '../../lib/api.js'
 import { adminApi } from '../../lib/adminApi.js'
-import LocationPicker from '../../components/map/LocationPicker.jsx'
 import Modal from './components/Modal.jsx'
-import QrPrintModal from './components/QrPrintModal.jsx'
 import { useConfirm, useToast } from './components/Feedback.jsx'
 import {
   Button,
@@ -20,7 +18,6 @@ import {
 } from './components/ui.jsx'
 
 const DEBOUNCE_MS = 300
-const DEFAULT_GEOFENCE_RADIUS = 10
 const LANGUAGES = [
   { code: 'vi', label: 'Tiếng Việt' },
   { code: 'en', label: 'English' },
@@ -34,12 +31,11 @@ const titleOf = (artifact) =>
 export default function ArtifactsAdmin() {
   const [query, setQuery] = useState('')
   const [artifacts, setArtifacts] = useState([])
-  const [rooms, setRooms] = useState([])
+  const [pois, setPois] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [creating, setCreating] = useState(false)
   const [editingId, setEditingId] = useState(null)
-  const [qrArtifact, setQrArtifact] = useState(null) // hiện vật đang mở modal In mã QR
   const toast = useToast()
   const confirm = useConfirm()
 
@@ -57,7 +53,7 @@ export default function ArtifactsAdmin() {
   )
 
   useEffect(() => {
-    api.listRooms().then(setRooms).catch(() => {})
+    adminApi.listPois().then(setPois).catch(() => {})
   }, [])
 
   useEffect(() => {
@@ -69,13 +65,13 @@ export default function ArtifactsAdmin() {
 
   const handleDelete = async (artifact) => {
     const ok = await confirm({
-      title: `Xoá hiện vật ${artifact.qr_code} — ${titleOf(artifact)}?`,
-      message: 'Toàn bộ bản dịch của hiện vật và các điểm dừng trong tour liên quan cũng bị xoá. Không thể hoàn tác.',
+      title: `Xoá hiện vật ${artifact.code} — ${titleOf(artifact)}?`,
+      message: 'Toàn bộ bản dịch của hiện vật cũng bị xoá. Không thể hoàn tác.',
     })
     if (!ok) return
     try {
       await adminApi.deleteArtifact(artifact.id)
-      toast.success(`Đã xoá hiện vật ${artifact.qr_code}`)
+      toast.success(`Đã xoá hiện vật ${artifact.code}`)
       refresh()
     } catch (err) {
       toast.error(err.message)
@@ -86,7 +82,7 @@ export default function ArtifactsAdmin() {
     <div className="max-w-6xl">
       <PageHeader
         title="Hiện vật"
-        description="Điểm thuyết minh (POI): thông tin chung, bản dịch đa ngôn ngữ và audio."
+        description="Nội dung thuyết minh: thông tin chung, bản dịch đa ngôn ngữ và audio. Vị trí và mã QR quản lý ở trang Điểm tham quan."
         action={
           <Button onClick={() => setCreating(true)}>
             <Plus size={16} /> Thêm hiện vật
@@ -99,7 +95,7 @@ export default function ArtifactsAdmin() {
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Tìm theo mã QR hoặc tên hiện vật..."
+          placeholder="Tìm theo mã hoặc tên hiện vật..."
           className={`${inputClass} pl-9`}
         />
       </div>
@@ -110,9 +106,9 @@ export default function ArtifactsAdmin() {
         <table className="w-full text-sm">
           <thead className="border-b border-ink/10 bg-sand/40 text-left text-xs uppercase tracking-wide text-ink-soft">
             <tr>
-              <th className="px-4 py-3 font-semibold">Mã QR</th>
+              <th className="px-4 py-3 font-semibold">Mã</th>
               <th className="px-4 py-3 font-semibold">Tên hiện vật</th>
-              <th className="px-4 py-3 font-semibold">Phòng</th>
+              <th className="px-4 py-3 font-semibold">Vị trí (POI)</th>
               <th className="px-4 py-3 font-semibold">Thời kỳ</th>
               <th className="px-4 py-3 font-semibold">Ngôn ngữ</th>
               <th className="w-40 px-4 py-3" />
@@ -134,14 +130,15 @@ export default function ArtifactsAdmin() {
             ) : (
               artifacts.map((a) => (
                 <tr key={a.id} className="hover:bg-cream/60">
-                  <td className="px-4 py-3 font-semibold text-ink">{a.qr_code}</td>
+                  <td className="px-4 py-3 font-semibold text-ink">{a.code}</td>
                   <td className="px-4 py-3">
                     <button onClick={() => setEditingId(a.id)} className="text-left font-medium text-ink hover:text-maroon">
                       {titleOf(a)}
                     </button>
                   </td>
                   <td className="px-4 py-3 text-ink-soft">
-                    {a.room ? `${a.room.code} — ${a.room.name_vi}` : '—'}
+                    {a.poi ? `${a.poi.code} — ${a.poi.name_vi}` : '—'}
+                    {a.room && <span className="block text-xs">{a.room.name_vi}</span>}
                   </td>
                   <td className="px-4 py-3 text-ink-soft">{a.period || '—'}</td>
                   <td className="px-4 py-3">
@@ -166,9 +163,6 @@ export default function ArtifactsAdmin() {
                     <div className="flex justify-end gap-1">
                       <IconButton label="Sửa" onClick={() => setEditingId(a.id)}>
                         <Pencil size={15} />
-                      </IconButton>
-                      <IconButton label="In mã QR" onClick={() => setQrArtifact(a)}>
-                        <QrCode size={15} />
                       </IconButton>
                       <a
                         href={`/hien-vat/${a.id}`}
@@ -196,7 +190,7 @@ export default function ArtifactsAdmin() {
 
       {creating && (
         <CreateArtifactModal
-          rooms={rooms}
+          pois={pois}
           onClose={() => setCreating(false)}
           onCreated={(id) => {
             setCreating(false)
@@ -206,16 +200,8 @@ export default function ArtifactsAdmin() {
         />
       )}
 
-      {qrArtifact && (
-        <QrPrintModal
-          code={qrArtifact.qr_code}
-          title={qrArtifact.translations.length ? titleOf(qrArtifact) : ''}
-          onClose={() => setQrArtifact(null)}
-        />
-      )}
-
       {editingId && (
-        <EditArtifactModal artifactId={editingId} rooms={rooms} onClose={() => setEditingId(null)} onChanged={refresh} />
+        <EditArtifactModal artifactId={editingId} pois={pois} onClose={() => setEditingId(null)} onChanged={refresh} />
       )}
     </div>
   )
@@ -225,26 +211,17 @@ export default function ArtifactsAdmin() {
 // Thông tin chung của hiện vật — dùng chung cho form thêm và form sửa
 // ---------------------------------------------------------------------
 const generalFromArtifact = (a) => ({
-  qr_code: a?.qr_code ?? '',
-  room_id: a?.room_id ?? '',
+  code: a?.code ?? '',
+  poi_id: a?.poi_id ?? '',
   period: a?.period ?? '',
   image_url: a?.image_url ?? '',
-  lat: a?.lat ?? '',
-  lng: a?.lng ?? '',
-  geofence_radius: a?.geofence_radius ?? DEFAULT_GEOFENCE_RADIUS,
 })
 
 const generalToPayload = (g) => ({
-  room_id: g.room_id,
+  poi_id: g.poi_id,
   period: toTextOrNull(g.period),
   image_url: toTextOrNull(g.image_url),
-  lat: toNumberOrNull(g.lat),
-  lng: toNumberOrNull(g.lng),
-  geofence_radius: toNumberOrNull(g.geofence_radius) ?? DEFAULT_GEOFENCE_RADIUS,
 })
-
-// Ghim của các hiện vật khác, hiện mờ trên bản đồ chọn vị trí để dễ canh chỗ
-const loadMapArtifacts = () => api.listArtifactPositions('vi')
 
 const MAX_IMAGE_MB = 5 // khớp MAX_IMAGE_BYTES ở backend (services/upload_service.py)
 
@@ -321,21 +298,26 @@ function ImageField({ value, onChange }) {
   )
 }
 
-function GeneralFields({ value, onChange, rooms, qrLocked, artifactId = null }) {
+function GeneralFields({ value, onChange, pois, codeLocked }) {
   const set = (field) => (e) => onChange({ ...value, [field]: e.target.value })
   return (
     <div className="grid gap-4 sm:grid-cols-2">
-      <Field label="Mã QR" required hint={qrLocked ? 'Mã QR không sửa được sau khi tạo.' : 'Mã in trên bảng QR, không trùng.'}>
-        <input className={inputClass} value={value.qr_code} onChange={set('qr_code')} disabled={qrLocked} placeholder="VD: HV-101-01" />
+      <Field label="Mã hiện vật" required hint={codeLocked ? 'Mã hiện vật không sửa được sau khi tạo.' : 'Số hiệu hiện vật, không trùng.'}>
+        <input className={inputClass} value={value.code} onChange={set('code')} disabled={codeLocked} placeholder="VD: SG-1822" />
       </Field>
-      <Field label="Phòng" required hint={rooms.length === 0 ? 'Chưa có phòng nào — hãy tạo phòng trước.' : undefined}>
-        <select required className={inputClass} value={value.room_id} onChange={set('room_id')}>
+      <Field
+        label="Điểm tham quan (POI)"
+        required
+        hint={pois.length === 0 ? 'Chưa có POI nào — hãy tạo ở trang Điểm tham quan trước.' : 'Nơi đặt hiện vật; mã QR và vị trí GPS lấy theo POI.'}
+      >
+        <select required className={inputClass} value={value.poi_id} onChange={set('poi_id')}>
           <option value="" disabled>
-            — Chọn phòng —
+            — Chọn điểm tham quan —
           </option>
-          {rooms.map((r) => (
-            <option key={r.id} value={r.id}>
-              {r.code} — {r.name_vi}
+          {pois.map((p) => (
+            <option key={p.id} value={p.id}>
+              {p.code} — {p.name_vi}
+              {p.room ? ` (${p.room.name_vi})` : ''}
             </option>
           ))}
         </select>
@@ -344,34 +326,6 @@ function GeneralFields({ value, onChange, rooms, qrLocked, artifactId = null }) 
         <input className={inputClass} value={value.period} onChange={set('period')} placeholder="VD: Thế kỷ XIX" />
       </Field>
       <ImageField value={value.image_url} onChange={(url) => onChange({ ...value, image_url: url })} />
-      {/* Không bọc trong <Field>/<label>: bấm vào bản đồ trong label sẽ kích hoạt nút/ô nhập bên trong */}
-      <div className="sm:col-span-2">
-        <span className="mb-1 block text-xs font-semibold text-ink">Vị trí trên bản đồ</span>
-        <LocationPicker
-          lat={value.lat}
-          lng={value.lng}
-          excludeId={artifactId}
-          loadOthers={loadMapArtifacts}
-          onChange={({ lat, lng }) => onChange({ ...value, lat, lng })}
-        />
-        <details className="mt-3 text-xs text-ink-soft">
-          <summary className="cursor-pointer select-none font-semibold">Nhập toạ độ thủ công / bán kính kích hoạt</summary>
-          <div className="mt-3 grid grid-cols-3 gap-3">
-            <Field label="Vĩ độ (lat)">
-              <input type="number" step="any" className={inputClass} value={value.lat} onChange={set('lat')} />
-            </Field>
-            <Field label="Kinh độ (lng)">
-              <input type="number" step="any" className={inputClass} value={value.lng} onChange={set('lng')} />
-            </Field>
-            <Field label="Bán kính kích hoạt (m)">
-              <input type="number" min="1" className={inputClass} value={value.geofence_radius} onChange={set('geofence_radius')} />
-            </Field>
-            <p className="col-span-3 -mt-1">
-              Bán kính dùng cho tính năng tự phát thuyết minh theo GPS ở bản mobile.
-            </p>
-          </div>
-        </details>
-      </div>
     </div>
   )
 }
@@ -379,13 +333,13 @@ function GeneralFields({ value, onChange, rooms, qrLocked, artifactId = null }) 
 // ---------------------------------------------------------------------
 // Thêm hiện vật mới (kèm bản dịch tiếng Việt bắt buộc)
 // ---------------------------------------------------------------------
-function CreateArtifactModal({ rooms, onClose, onCreated }) {
+function CreateArtifactModal({ pois, onClose, onCreated }) {
   const [general, setGeneral] = useState(generalFromArtifact(null))
   const [vi, setVi] = useState({ title: '', transcript: '', audio_url: '' })
   const [saving, setSaving] = useState(false)
   const toast = useToast()
 
-  const valid = general.qr_code.trim() && general.room_id && vi.title.trim()
+  const valid = general.code.trim() && general.poi_id && vi.title.trim()
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -393,7 +347,7 @@ function CreateArtifactModal({ rooms, onClose, onCreated }) {
     setSaving(true)
     try {
       const created = await adminApi.createArtifact({
-        qr_code: general.qr_code.trim(),
+        code: general.code.trim(),
         ...generalToPayload(general),
         translations: [
           {
@@ -404,7 +358,7 @@ function CreateArtifactModal({ rooms, onClose, onCreated }) {
           },
         ],
       })
-      toast.success(`Đã tạo hiện vật ${created.qr_code}`)
+      toast.success(`Đã tạo hiện vật ${created.code}`)
       onCreated(created.id)
     } catch (err) {
       toast.error(err.message)
@@ -417,7 +371,7 @@ function CreateArtifactModal({ rooms, onClose, onCreated }) {
     <Modal title="Thêm hiện vật" onClose={onClose} size="max-w-3xl">
       <form onSubmit={handleSubmit}>
         <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-ink-soft">Thông tin chung</h3>
-        <GeneralFields value={general} onChange={setGeneral} rooms={rooms} />
+        <GeneralFields value={general} onChange={setGeneral} pois={pois} />
 
         <h3 className="mb-3 mt-6 text-sm font-semibold uppercase tracking-wide text-ink-soft">Bản dịch tiếng Việt</h3>
         <div className="space-y-4">
@@ -459,7 +413,7 @@ function CreateArtifactModal({ rooms, onClose, onCreated }) {
 // ---------------------------------------------------------------------
 // Sửa hiện vật: thông tin chung + bản dịch từng ngôn ngữ
 // ---------------------------------------------------------------------
-function EditArtifactModal({ artifactId, rooms, onClose, onChanged }) {
+function EditArtifactModal({ artifactId, pois, onClose, onChanged }) {
   const [artifact, setArtifact] = useState(null)
   const [general, setGeneral] = useState(null)
   const [activeLang, setActiveLang] = useState('vi')
@@ -504,7 +458,7 @@ function EditArtifactModal({ artifactId, rooms, onClose, onChanged }) {
   }
 
   return (
-    <Modal title={artifact ? `Sửa hiện vật ${artifact.qr_code}` : 'Sửa hiện vật'} onClose={onClose} size="max-w-3xl">
+    <Modal title={artifact ? `Sửa hiện vật ${artifact.code}` : 'Sửa hiện vật'} onClose={onClose} size="max-w-3xl">
       {loadError ? (
         <ErrorBox message={loadError} />
       ) : !artifact ? (
@@ -513,7 +467,7 @@ function EditArtifactModal({ artifactId, rooms, onClose, onChanged }) {
         <>
           <form onSubmit={handleSaveGeneral}>
             <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-ink-soft">Thông tin chung</h3>
-            <GeneralFields value={general} onChange={setGeneral} rooms={rooms} qrLocked artifactId={artifactId} />
+            <GeneralFields value={general} onChange={setGeneral} pois={pois} codeLocked />
             <div className="mt-4 flex justify-end">
               <Button type="submit" loading={saving}>
                 Lưu thông tin chung

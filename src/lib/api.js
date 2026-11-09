@@ -52,15 +52,19 @@ function withQuery(path, params = {}) {
 export const api = {
   // ---------- Hiện vật ----------
   searchArtifacts: (q, lang = 'vi') => request(withQuery('/artifacts', { q, lang })),
-  lookupArtifactByQrCode: (code, lang = 'vi') =>
+  // Nhập mã hiện vật thủ công (trang Tra cứu)
+  lookupArtifactByCode: (code, lang = 'vi') =>
     request(withQuery(`/artifacts/lookup/${encodeURIComponent(code)}`, { lang })),
   getArtifact: (id, lang = 'vi') => request(withQuery(`/artifacts/${id}`, { lang })),
 
+  // ---------- Điểm tham quan (POI) — mã trong QR là mã POI ----------
+  lookupPoiByCode: (code, lang = 'vi') =>
+    request(withQuery(`/pois/lookup/${encodeURIComponent(code)}`, { lang })),
+
   // ---------- Phòng & bản đồ ----------
-  listArtifactPositions: (lang = 'vi', options = {}) =>
-    request(withQuery('/map/artifacts', { lang }), options),
+  listMapPois: (lang = 'vi', options = {}) =>
+    request(withQuery('/map/pois', { lang }), options),
   listRooms: () => request('/rooms'),
-  getRoom: (id, lang = 'vi') => request(withQuery(`/rooms/${id}`, { lang })),
 
   // ---------- Tuyến tham quan ----------
   listTours: (lang = 'vi') => request(withQuery('/tours', { lang })),
