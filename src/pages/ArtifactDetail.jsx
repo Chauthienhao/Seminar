@@ -99,7 +99,7 @@ export default function ArtifactDetail() {
         <p className="mt-2 text-sm text-ink-soft">
           {error === 'not_found'
             ? 'Mã hiện vật không tồn tại hoặc đã bị gỡ khỏi hệ thống.'
-            : `Kiểm tra lại backend đã chạy ở http://localhost:8000 chưa.`}
+            : 'Không kết nối được máy chủ, vui lòng thử lại sau.'}
         </p>
         <NavLink to="/tra-cuu-hien-vat" className="mt-6 inline-block text-sm font-semibold text-maroon">
           ← Quay lại trang Tra cứu hiện vật

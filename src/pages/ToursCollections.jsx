@@ -82,7 +82,7 @@ export default function ToursCollections() {
 
         {!loading && error && (
           <p className="mt-4 rounded-2xl border border-dashed border-ink/15 p-8 text-center text-sm text-maroon">
-            {error} Kiểm tra lại backend đã chạy ở <code>http://localhost:8000</code> chưa.
+            {error} Không kết nối được máy chủ, vui lòng thử lại sau.
           </p>
         )}
 

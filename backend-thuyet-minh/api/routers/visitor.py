@@ -14,10 +14,12 @@ from domain.schemas import (
     PlayLogCreate,
     PlayLogOut,
     PoiDetail,
+    PresenceHeartbeat,
     RoomOut,
     TourDetail,
     TourSummary,
 )
+from services import presence_service
 from services.audio_service import AudioService
 from services.map_service import MapService
 
@@ -63,6 +65,14 @@ def log_play(payload: PlayLogCreate, db: Session = Depends(get_db)):
         return AudioService(db).log_play(payload)
     except NotFoundError as e:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail=str(e))
+
+
+# ---------- Thiết bị đang truy cập ----------
+
+@router.post("/presence/heartbeat", status_code=status.HTTP_204_NO_CONTENT)
+def presence_heartbeat(payload: PresenceHeartbeat):
+    """Frontend gọi mỗi 30 giây khi khách đang mở web, để CMS đếm số thiết bị đang truy cập."""
+    presence_service.heartbeat(payload.device_id)
 
 
 # ---------- Phòng & bản đồ ----------

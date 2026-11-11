@@ -129,7 +129,7 @@ export default function ArtifactLookup() {
 
           {!loading && listError && (
             <p className="px-5 py-8 text-center text-sm text-maroon">
-              {listError} — kiểm tra lại backend đã chạy ở <code>http://localhost:8000</code> chưa.
+              {listError} — không kết nối được máy chủ, vui lòng thử lại sau.
             </p>
           )}
 

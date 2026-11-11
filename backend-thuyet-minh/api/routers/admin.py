@@ -18,6 +18,7 @@ from domain.schemas import (
     ArtifactTranslationUpdate,
     ArtifactUpdate,
     LoginRequest,
+    OnlineStat,
     PoiCreate,
     PoiDetail,
     PoiUpdate,
@@ -31,6 +32,7 @@ from domain.schemas import (
     TourUpdate,
     UserOut,
 )
+from services import presence_service
 from services.audio_service import AudioService
 from services.auth_service import AuthService
 from services.map_service import MapService
@@ -356,3 +358,12 @@ def top_played_artifacts(
     _: UserOut = Depends(get_current_user),
 ):
     return AudioService(db).top_played(lang, limit)
+
+
+@router.get("/stats/online", response_model=OnlineStat)
+def online_devices(_: UserOut = Depends(get_current_user)):
+    """Số thiết bị (trình duyệt) đang mở website khách tham quan."""
+    return OnlineStat(
+        online_devices=presence_service.count_online(),
+        window_seconds=presence_service.ONLINE_WINDOW_SECONDS,
+    )

@@ -72,6 +72,10 @@ export const api = {
 
   // ---------- Ghi log lượt phát (Analytics) ----------
   logPlay: (payload) => request('/play-logs', { method: 'POST', body: JSON.stringify(payload) }),
+
+  // ---------- Thiết bị đang truy cập (xem lib/presence.js) ----------
+  sendHeartbeat: (deviceId) =>
+    request('/presence/heartbeat', { method: 'POST', body: JSON.stringify({ device_id: deviceId }) }),
 }
 
 export { ApiError }

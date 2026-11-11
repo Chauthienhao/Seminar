@@ -35,6 +35,10 @@ class Settings:
 
     # --- Service TTS/audio riêng biệt (nếu tách microservice) ---
     TTS_SERVICE_URL: str = os.getenv("TTS_SERVICE_URL", "http://localhost:8001")
+    # Địa chỉ TTS mà TRÌNH DUYỆT của khách dùng để phát audio (khác TTS_SERVICE_URL là địa chỉ nội bộ).
+    # Mặc định '/tts': đi qua proxy của Vite (cùng origin), nên chạy được cả khi public qua
+    # Tailscale/https. Nếu để http://localhost:8001 thì máy khác sẽ không phát được audio.
+    TTS_PUBLIC_URL: str = os.getenv("TTS_PUBLIC_URL", "/tts").rstrip("/")
 
     ENV: str = os.getenv("ENV", "development")
 

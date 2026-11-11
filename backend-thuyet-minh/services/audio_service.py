@@ -225,7 +225,7 @@ class AudioService:
         if not out.audio_url:
             encoded_text = quote((translation.transcript or translation.title)[:2000])
             out.audio_url = (
-                f"{settings.TTS_SERVICE_URL}/synthesize"
+                f"{settings.TTS_PUBLIC_URL}/synthesize"
                 f"?text={encoded_text}&lang={translation.language_code}"
             )
             out.audio_source = "tts"

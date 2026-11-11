@@ -45,6 +45,25 @@ npm run dev
 - Trang quản trị: http://localhost:5173/admin (mặc định `admin` / `Admin@123`, đổi bằng `python create_admin.py --password "..."`)
 - Tài liệu API: http://localhost:8000/docs
 
+## Cho người ngoài truy cập qua Tailscale Funnel
+
+Chỉ cần public cổng 5173: Vite proxy `/api`, `/uploads` sang backend (8000) và `/tts` sang TTS (8001).
+
+1. Cài Tailscale cho Windows (https://tailscale.com/download) và đăng nhập.
+2. Trên https://login.tailscale.com/admin: bật **MagicDNS** và **HTTPS Certificates** (mục DNS); bật quyền **Funnel** (lần đầu chạy lệnh ở bước 4, Tailscale sẽ đưa link để bật).
+3. Chạy đủ 3 phần như mục trên (backend 8000, TTS 8001, frontend 5173).
+4. Mở PowerShell và chạy:
+
+   ```powershell
+   tailscale funnel --bg 5173
+   tailscale funnel status   # xem link https://<tên-máy>.<tailnet>.ts.net
+   ```
+
+5. Tạo file `.env` ở thư mục gốc với `VITE_PUBLIC_URL=https://<tên-máy>.<tailnet>.ts.net`, rồi chạy lại `npm run dev` để mã QR in ra dùng link này.
+6. Tắt public: `tailscale funnel --https=443 off` (hoặc `tailscale funnel reset`).
+
+Lưu ý: trang `/admin` cũng ra Internet, nên đổi `SECRET_KEY` trong `backend-thuyet-minh/.env` và mật khẩu admin (`python create_admin.py --password "..."`). Web chỉ truy cập được khi máy này đang bật và các service đang chạy.
+
 ## Mã QR điểm tham quan (POI)
 
 - Mã QR dán tại mỗi **điểm tham quan (POI)**, không phải từng hiện vật: một POI (VD một tủ trưng bày) có thể chứa nhiều hiện vật, hoặc không có hiện vật nào (lối vào, quầy thông tin).

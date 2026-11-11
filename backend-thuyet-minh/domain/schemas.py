@@ -5,7 +5,7 @@ Gộp chung 1 file cho gọn theo đúng cấu trúc thư mục domain/ đã ch�
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 
 # ---------- Room ----------
@@ -242,6 +242,19 @@ class PlayLogOut(BaseModel):
     language_played: str
     played_at: datetime
     listen_duration: int | None
+
+
+class PresenceHeartbeat(BaseModel):
+    """Trình duyệt của khách báo "vẫn đang mở web" (xem services/presence_service.py)."""
+
+    device_id: str = Field(..., min_length=8, max_length=64, pattern=r"^[A-Za-z0-9-]+$")
+
+
+class OnlineStat(BaseModel):
+    """Số thiết bị đang truy cập — dùng cho trang Tổng quan CMS."""
+
+    online_devices: int
+    window_seconds: int
 
 
 class ArtifactPlayStat(BaseModel):

@@ -77,6 +77,7 @@ export async function login(username, password) {
 export const adminApi = {
   me: () => adminRequest('/me'),
   topPlayed: (limit = 5, lang = 'vi') => adminRequest(`/stats/top-played?lang=${lang}&limit=${limit}`),
+  onlineDevices: () => adminRequest('/stats/online'),
 
   // ---------- Hiện vật ----------
   listArtifacts: (q = '', limit = 200) => {

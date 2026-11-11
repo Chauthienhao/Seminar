@@ -9,9 +9,12 @@ import MuseumMap from './pages/MuseumMap.jsx'
 import ToursCollections from './pages/ToursCollections.jsx'
 import QrRedirect from './pages/QrRedirect.jsx'
 import PoiDetail from './pages/PoiDetail.jsx'
+import { usePresenceHeartbeat } from './lib/presence.js'
 
 // Khung chung của site khách tham quan — khu CMS (/admin/*) có layout riêng nên nằm ngoài khung này
 function PublicLayout() {
+  // Chỉ đếm khách tham quan; người đang ở trang /admin không được tính
+  usePresenceHeartbeat()
   return (
     <div className="flex min-h-screen flex-col bg-cream">
       <Header />

@@ -1,12 +1,53 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Headphones, Clock3, Landmark, DoorOpen, MapPin, Route as RouteIcon } from 'lucide-react'
+import { Headphones, Clock3, Landmark, DoorOpen, MapPin, Route as RouteIcon, Smartphone } from 'lucide-react'
 
 import { api } from '../../lib/api.js'
 import { adminApi } from '../../lib/adminApi.js'
 import { ErrorBox, LoadingRow, PageHeader } from './components/ui.jsx'
 
 const ARTIFACT_FETCH_LIMIT = 200 // giới hạn tối đa của GET /api/admin/artifacts
+const ONLINE_REFRESH_MS = 10_000
+
+/**
+ * Thẻ "Thiết bị đang truy cập": hỏi backend (GET /api/admin/stats/online) mỗi 10 giây.
+ * Số này đến từ heartbeat của trang khách (src/lib/presence.js -> services/presence_service.py).
+ */
+function OnlineDevicesCard() {
+  const [online, setOnline] = useState(null)
+  const [failed, setFailed] = useState(false)
+
+  useEffect(() => {
+    let cancelled = false
+    const load = () =>
+      adminApi
+        .onlineDevices()
+        .then((data) => {
+          if (cancelled) return
+          setOnline(data)
+          setFailed(false)
+        })
+        .catch(() => !cancelled && setFailed(true))
+
+    load()
+    const timer = setInterval(load, ONLINE_REFRESH_MS)
+    return () => {
+      cancelled = true
+      clearInterval(timer)
+    }
+  }, [])
+
+  return (
+    <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-ink/10 bg-paper p-5">
+      <span className="flex items-center gap-2 text-sm text-ink-soft">
+        <Smartphone size={16} className="text-maroon" /> Thiết bị đang truy cập
+      </span>
+      <span className="font-serif text-3xl font-semibold text-ink">
+        {failed && !online ? '—' : online ? online.online_devices : '…'}
+      </span>
+    </div>
+  )
+}
 
 export default function AdminOverview({ me }) {
   const [counts, setCounts] = useState(null)
@@ -43,6 +84,8 @@ export default function AdminOverview({ me }) {
         description="Tình hình nội dung và lượt nghe thuyết minh của bảo tàng."
       />
       <ErrorBox message={error} />
+
+      <OnlineDevicesCard />
 
       {loading ? (
         <LoadingRow />
