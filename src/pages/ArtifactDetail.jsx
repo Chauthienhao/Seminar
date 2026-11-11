@@ -117,7 +117,7 @@ export default function ArtifactDetail() {
         <div>
           <div className="overflow-hidden rounded-2xl border border-ink/10 bg-sand">
             {artifact.image_url && (
-              <img src={artifact.image_url} alt={translation.title} className="aspect-[4/3] w-full object-cover" />
+              <img src={artifact.image_url} alt={translation.title} className="aspect-[4/3] w-full object-contain" />
             )}
           </div>
 

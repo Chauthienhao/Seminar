@@ -87,7 +87,7 @@ export default function PoisAdmin() {
     <div className="max-w-6xl">
       <PageHeader
         title="Điểm tham quan (POI)"
-        description="Vị trí trong bảo tàng nơi dán mã QR và có toạ độ GPS. Mỗi POI chứa một hoặc nhiều hiện vật, hoặc không có hiện vật nào (lối vào, quầy thông tin...)."
+        description="Vị trí trong bảo tàng nơi dán mã QR. Mỗi POI chứa một hoặc nhiều hiện vật, hoặc không có hiện vật nào (lối vào, quầy thông tin...)."
         action={
           <Button onClick={() => setEditing('new')}>
             <Plus size={16} /> Thêm POI
