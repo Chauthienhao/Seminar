@@ -13,13 +13,13 @@ const text = value => typeof value === 'string' ? value.trim() : '';
 const isObject = value => Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 const validId = id => (typeof id === 'string' || (typeof id === 'number' && Number.isFinite(id))) && String(id).trim();
 
-function normalizeArtifact(item) {
+function normalizeArtifact(item, lang) {
   const id = isObject(item) && validId(item.id);
   if (!id) return null;
   return {
     id: String(item.id).trim(),
     code: text(item.code),
-    title: text(item.title) || 'Hiện vật',
+    title: text(item.title) || (lang === 'en' ? 'Artifact' : 'Hiện vật'),
     image_url: text(item.image_url) || null,
     description: text(item.description) || null,
   };
@@ -29,8 +29,9 @@ function normalizeArtifact(item) {
  * Mỗi POI (điểm tham quan) có GPS hợp lệ là một ghim. Hiện vật đặt tại POI nằm trong
  * `artifacts`; POI không có hiện vật (lối vào, quầy thông tin) vẫn được giữ lại.
  * `title` = tên POI, dùng cho tooltip và ghim mờ trong LocationPicker.
+ * `lang` ('vi' | 'en') chọn name_/description_ tương ứng, thiếu bản EN thì lùi về bản VI.
  */
-export function normalizePois(input) {
+export function normalizePois(input, lang = 'vi') {
   if (!Array.isArray(input)) return [];
   const seen = new Set();
   const pois = [];
@@ -45,14 +46,15 @@ export function normalizePois(input) {
     const room = isObject(item.room)
       ? { id: item.room.id, code: text(item.room.code), name_vi: text(item.room.name_vi), name_en: text(item.room.name_en) }
       : null;
+    const localized = field => (lang === 'en' && text(item[field + '_en'])) || text(item[field + '_vi']);
     pois.push({
       id,
       code: text(item.code),
-      title: text(item.name_vi) || text(item.code) || 'Điểm tham quan',
+      title: localized('name') || text(item.code) || (lang === 'en' ? 'Point of interest' : 'Điểm tham quan'),
       poi_type: text(item.poi_type) || 'EXHIBIT',
-      description: text(item.description_vi) || null,
+      description: localized('description') || null,
       room,
-      artifacts: Array.isArray(item.artifacts) ? item.artifacts.map(normalizeArtifact).filter(Boolean) : [],
+      artifacts: Array.isArray(item.artifacts) ? item.artifacts.map(a => normalizeArtifact(a, lang)).filter(Boolean) : [],
       lat,
       lng,
     });

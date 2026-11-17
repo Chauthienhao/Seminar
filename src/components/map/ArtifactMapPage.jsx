@@ -21,7 +21,7 @@ export default function ArtifactMapPage({ loadPois, height = '100%' }) {
         if (!Array.isArray(items)) throw new Error('Invalid POI response');
         if (active) setPois(items);
       })
-      .catch(() => { if (active) setError('Không tải được điểm tham quan.'); })
+      .catch(() => { if (active) setError('load_failed'); })
       .finally(() => {
         clearTimeout(timeout);
         if (active) setLoading(false);

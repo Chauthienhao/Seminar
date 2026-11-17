@@ -4,6 +4,7 @@ import { Loader2, QrCode } from 'lucide-react'
 
 import { api, ApiError } from '../lib/api.js'
 import { extractQrCode } from '../lib/qrCode.mjs'
+import { useLang } from '../lib/i18n.jsx'
 
 /**
  * Route /q/:code — đích đến của link in trong mã QR dán tại một điểm tham quan (POI).
@@ -17,6 +18,7 @@ export default function QrRedirect() {
   const { code: rawCode } = useParams()
   const navigate = useNavigate()
   const [error, setError] = useState(null)
+  const { lang, t } = useLang()
   const code = extractQrCode(rawCode)
 
   useEffect(() => {
@@ -27,7 +29,7 @@ export default function QrRedirect() {
     let active = true
     setError(null)
     api
-      .lookupPoiByCode(code, 'vi')
+      .lookupPoiByCode(code, lang)
       .then((poi) => {
         if (!active) return
         const target =
@@ -42,20 +44,20 @@ export default function QrRedirect() {
     return () => {
       active = false
     }
-  }, [code, navigate])
+  }, [code, lang, navigate])
 
   if (!error) {
     return (
       <section className="mx-auto flex max-w-content items-center justify-center gap-2 px-4 py-24 text-sm text-ink-soft">
-        <Loader2 size={18} className="animate-spin" /> Đang mở điểm tham quan {code}...
+        <Loader2 size={18} className="animate-spin" /> {t('qr.opening', { code })}
       </section>
     )
   }
 
   const message = {
-    invalid: 'Mã QR này không phải mã của bảo tàng.',
-    not_found: `Không tìm thấy điểm tham quan với mã "${code}". Mã có thể đã bị gỡ hoặc in sai.`,
-    network: 'Không thể kết nối tới máy chủ. Vui lòng thử lại.',
+    invalid: t('qr.invalid'),
+    not_found: t('qr.notFound', { code }),
+    network: t('common.networkRetry'),
   }[error]
 
   return (
@@ -68,7 +70,7 @@ export default function QrRedirect() {
         to="/tra-cuu-hien-vat"
         className="mt-6 inline-block rounded-full bg-maroon px-5 py-2.5 text-sm font-semibold text-cream hover:bg-maroon-700"
       >
-        Tra cứu hiện vật bằng mã
+        {t('qr.lookupByCode')}
       </NavLink>
     </section>
   )

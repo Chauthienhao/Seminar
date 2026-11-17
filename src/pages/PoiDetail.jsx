@@ -3,6 +3,7 @@ import { NavLink, useParams, useSearchParams } from 'react-router-dom'
 import { ArrowRight, Loader2, MapPin } from 'lucide-react'
 
 import { api, ApiError } from '../lib/api.js'
+import { pick, useLang } from '../lib/i18n.jsx'
 
 /**
  * Route /diem/:code — trang của một điểm tham quan (POI).
@@ -16,28 +17,29 @@ export default function PoiDetail() {
   const fromQr = searchParams.get('src') === 'qr'
   const [poi, setPoi] = useState(null)
   const [error, setError] = useState(null)
+  const { lang, t } = useLang()
 
   useEffect(() => {
     let active = true
     setPoi(null)
     setError(null)
     api
-      .lookupPoiByCode(code, 'vi')
+      .lookupPoiByCode(code, lang)
       .then((data) => active && setPoi(data))
       .catch((err) => active && setError(err instanceof ApiError && err.status === 404 ? 'not_found' : 'network'))
     return () => {
       active = false
     }
-  }, [code])
+  }, [code, lang])
 
   if (error) {
     return (
       <section className="mx-auto max-w-content px-4 py-24 text-center">
         <h1 className="text-2xl font-semibold">
-          {error === 'not_found' ? 'Không tìm thấy điểm tham quan này' : 'Không thể kết nối tới máy chủ'}
+          {error === 'not_found' ? t('poi.notFound') : t('artifact.networkTitle')}
         </h1>
         <NavLink to="/tra-cuu-hien-vat" className="mt-6 inline-block text-sm font-semibold text-maroon">
-          ← Quay lại trang Tra cứu hiện vật
+          {t('common.backToLookup')}
         </NavLink>
       </section>
     )
@@ -46,7 +48,7 @@ export default function PoiDetail() {
   if (!poi) {
     return (
       <section className="mx-auto flex max-w-content items-center justify-center gap-2 px-4 py-24 text-sm text-ink-soft">
-        <Loader2 size={18} className="animate-spin" /> Đang tải điểm tham quan...
+        <Loader2 size={18} className="animate-spin" /> {t('poi.loading')}
       </section>
     )
   }
@@ -55,15 +57,17 @@ export default function PoiDetail() {
     <section className="mx-auto max-w-content px-4 py-10 sm:px-6 sm:py-14">
       <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.16em] text-maroon">
         <MapPin size={13} /> {poi.code}
-        {poi.room ? ` — ${poi.room.name_vi}` : ''}
+        {poi.room ? ` — ${pick(poi.room, 'name', lang)}` : ''}
       </p>
-      <h1 className="mt-2 text-3xl font-semibold sm:text-4xl">{poi.name_vi}</h1>
-      {poi.description_vi && <p className="mt-3 max-w-xl text-sm leading-relaxed text-ink-soft">{poi.description_vi}</p>}
+      <h1 className="mt-2 text-3xl font-semibold sm:text-4xl">{pick(poi, 'name', lang)}</h1>
+      {pick(poi, 'description', lang) && (
+        <p className="mt-3 max-w-xl text-sm leading-relaxed text-ink-soft">{pick(poi, 'description', lang)}</p>
+      )}
 
       {poi.artifacts.length > 0 && (
         <div className="mt-10">
           <p className="text-xs font-semibold uppercase tracking-[0.16em] text-maroon">
-            Hiện vật tại điểm này ({poi.artifacts.length})
+            {t('poi.artifactsHere', { count: poi.artifacts.length })}
           </p>
           <div className="mt-4 divide-y divide-ink/10 rounded-2xl border border-ink/10 bg-paper">
             {poi.artifacts.map((a) => (

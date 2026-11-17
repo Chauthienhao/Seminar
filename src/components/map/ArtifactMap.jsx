@@ -27,6 +27,7 @@ import {
   TILE_URL,
   updateMuseumLimits,
 } from './museumMapLeaflet.js';
+import { pick, useLang } from '../../lib/i18n.jsx';
 
 const EMPTY_POIS = [];
 
@@ -68,14 +69,15 @@ function FitArtifactBounds({ points }) {
 
 function MuseumResetControl({ points }) {
   const map = useMap();
+  const { t } = useLang();
   useEffect(() => {
     const control = L.control({ position: 'topright' });
     control.onAdd = () => {
       const container = L.DomUtil.create('div', 'leaflet-bar artifact-map-reset');
       const button = L.DomUtil.create('button', '', container);
       button.type = 'button';
-      button.textContent = 'Về bảo tàng';
-      button.title = 'Trở về khu vực điểm tham quan trong bảo tàng';
+      button.textContent = t('map.resetButton');
+      button.title = t('map.resetTitle');
       L.DomEvent.disableClickPropagation(container);
       L.DomEvent.disableScrollPropagation(container);
       L.DomEvent.on(button, 'click', () => {
@@ -87,7 +89,7 @@ function MuseumResetControl({ points }) {
     };
     control.addTo(map);
     return () => control.remove();
-  }, [map, points]);
+  }, [map, points, t]);
   return null;
 }
 
@@ -157,8 +159,9 @@ function MuseumPopupBounds() {
 
 function ArtifactImage({ artifact }) {
   const [failed, setFailed] = useState(false);
+  const { t } = useLang();
   if (!artifact.image_url || failed) {
-    return <div className="artifact-map-image-placeholder">Chưa có ảnh</div>;
+    return <div className="artifact-map-image-placeholder">{t('map.noImage')}</div>;
   }
   return <img className="artifact-map-image" src={artifact.image_url} alt={artifact.title}
     loading="lazy" onError={() => setFailed(true)} />;
@@ -166,6 +169,7 @@ function ArtifactImage({ artifact }) {
 
 /** Popup của một POI: tên điểm, phòng, mã QR; chọn được từng hiện vật nếu POI có nhiều hiện vật. */
 function PoiPopup({ poi }) {
+  const { lang, t } = useLang();
   const [artifactId, setArtifactId] = useState(poi.artifacts[0]?.id ?? null);
   const artifact = poi.artifacts.find(item => item.id === artifactId) ?? poi.artifacts[0] ?? null;
   const description = shortDescription(artifact ? artifact.description : poi.description);
@@ -173,7 +177,7 @@ function PoiPopup({ poi }) {
     <article className="artifact-map-popup" data-poi-id={poi.id}>
       <h3>{poi.title}</h3>
       {poi.artifacts.length > 1 && <label className="artifact-map-artifact-label">
-        Hiện vật tại điểm này ({poi.artifacts.length})
+        {t('map.artifactsHere', { count: poi.artifacts.length })}
         <select className="artifact-map-artifact-select" value={artifact.id}
           onChange={event => setArtifactId(event.target.value)}>
           {poi.artifacts.map(item => <option key={item.id} value={item.id}>{item.title}</option>)}
@@ -181,13 +185,13 @@ function PoiPopup({ poi }) {
       </label>}
       {artifact && <ArtifactImage key={artifact.id + ':' + artifact.image_url} artifact={artifact} />}
       <dl className="artifact-map-facts">
-        <div><dt>Mã điểm (QR)</dt><dd>{poi.code || 'Chưa có mã'}</dd></div>
-        <div><dt>Phòng</dt><dd>{poi.room?.name_vi || 'Chưa có thông tin phòng'}</dd></div>
+        <div><dt>{t('map.poiCode')}</dt><dd>{poi.code || t('map.noCode')}</dd></div>
+        <div><dt>{t('map.room')}</dt><dd>{pick(poi.room, 'name', lang) || t('map.noRoom')}</dd></div>
       </dl>
-      <p className="artifact-map-description">{description || 'Chưa có mô tả.'}</p>
+      <p className="artifact-map-description">{description || t('map.noDescription')}</p>
       {artifact
-        ? <Link className="artifact-map-details-link" to={'/hien-vat/' + encodeURIComponent(artifact.id)}>Xem chi tiết</Link>
-        : <Link className="artifact-map-details-link" to={'/diem/' + encodeURIComponent(poi.code)}>Xem điểm tham quan</Link>}
+        ? <Link className="artifact-map-details-link" to={'/hien-vat/' + encodeURIComponent(artifact.id)}>{t('map.viewDetails')}</Link>
+        : <Link className="artifact-map-details-link" to={'/diem/' + encodeURIComponent(poi.code)}>{t('map.viewPoi')}</Link>}
     </article>
   );
 }
@@ -221,7 +225,8 @@ function PoiMarker({ poi, selectedId, onSelect }) {
  * Its parent owns API requests; detail links use the app router.
  */
 export default function ArtifactMap({ pois = EMPTY_POIS, loading = false, error = null, onRetry, height = '100%' }) {
-  const normalized = useMemo(() => normalizePois(pois).filter(isInMuseum), [pois]);
+  const { lang, t } = useLang();
+  const normalized = useMemo(() => normalizePois(pois, lang).filter(isInMuseum), [pois, lang]);
   const signature = coordinateSignature(normalized);
   // The signature consists only of unique coordinate values. Selecting a marker
   // or receiving a reordered response never refits.
@@ -232,7 +237,7 @@ export default function ArtifactMap({ pois = EMPTY_POIS, loading = false, error 
   }, [normalized, selectedId]);
 
   return (
-    <section className="artifact-map" style={{ height }} aria-label="Bản đồ điểm tham quan" aria-busy={loading}>
+    <section className="artifact-map" style={{ height }} aria-label={t('map.ariaLabel')} aria-busy={loading}>
       <MapContainer center={MUSEUM_CENTER} zoom={MUSEUM_MIN_ZOOM}
         minZoom={MUSEUM_MIN_ZOOM} maxZoom={MUSEUM_MAX_ZOOM}
         zoomSnap={MUSEUM_ZOOM_STEP} zoomDelta={MUSEUM_ZOOM_STEP}
@@ -250,13 +255,13 @@ export default function ArtifactMap({ pois = EMPTY_POIS, loading = false, error 
         {normalized.map(poi => <PoiMarker key={poi.id} poi={poi}
           selectedId={selectedId} onSelect={setSelectedId} />)}
       </MapContainer>
-      {loading && <div className="artifact-map-message" role="status">Đang tải điểm tham quan…</div>}
+      {loading && <div className="artifact-map-message" role="status">{t('map.loading')}</div>}
       {!loading && error && <div className="artifact-map-message is-error" role="alert">
-        <span>Không tải được bản đồ. Vui lòng thử lại.</span>
-        {typeof onRetry === 'function' && <button type="button" onClick={onRetry}>Thử lại</button>}
+        <span>{t('map.loadFailed')}</span>
+        {typeof onRetry === 'function' && <button type="button" onClick={onRetry}>{t('map.retry')}</button>}
       </div>}
       {!loading && !error && normalized.length === 0 && <div className="artifact-map-message" role="status">
-        Chưa có điểm tham quan có vị trí trong khu vực bảo tàng để hiển thị.
+        {t('map.empty')}
       </div>}
     </section>
   );

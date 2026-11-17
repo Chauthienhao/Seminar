@@ -2,16 +2,35 @@ import { useState } from 'react'
 import { NavLink } from 'react-router-dom'
 import { Menu, X, Search } from 'lucide-react'
 
+import { useLang } from '../lib/i18n.jsx'
+
 const NAV_LINKS = [
-  { to: '/', label: 'Trang chủ' },
-  { to: '/tra-cuu-hien-vat', label: 'Tra cứu hiện vật' },
-  { to: '/ban-do', label: 'Bản đồ tham quan' },
-  { to: '/bo-suu-tap', label: 'Bộ sưu tập & Lộ trình' },
+  { to: '/', labelKey: 'nav.home' },
+  { to: '/tra-cuu-hien-vat', labelKey: 'nav.lookup' },
+  { to: '/ban-do', labelKey: 'nav.map' },
+  { to: '/bo-suu-tap', labelKey: 'nav.tours' },
 ]
+
+/** Nút VI | EN — ngôn ngữ đang chọn được tô đậm, bấm để đổi cho toàn site. */
+function LanguageSwitch({ className = '' }) {
+  const { lang, toggleLang, t } = useLang()
+  return (
+    <button
+      onClick={toggleLang}
+      className={`rounded-full border border-ink/15 px-3 py-1.5 text-xs font-semibold text-ink-soft transition-colors hover:border-maroon hover:text-maroon ${className}`}
+      aria-label={t('header.switchLang')}
+      title={t('header.switchLang')}
+    >
+      <span className={lang === 'vi' ? 'text-maroon' : 'opacity-60'}>VI</span>
+      <span className="mx-1 opacity-40">/</span>
+      <span className={lang === 'en' ? 'text-maroon' : 'opacity-60'}>EN</span>
+    </button>
+  )
+}
 
 export default function Header() {
   const [open, setOpen] = useState(false)
-  const [lang, setLang] = useState('VI')
+  const { t } = useLang()
 
   return (
     <header className="sticky top-0 z-40 border-b border-ink/10 bg-cream/95 backdrop-blur">
@@ -23,7 +42,7 @@ export default function Header() {
           </span>
           <span className="leading-tight">
             <span className="block font-serif text-sm font-semibold tracking-tight text-ink sm:text-base">
-              BẢO TÀNG THÀNH PHỐ HỒ CHÍ MINH
+              {t('header.museumName')}
             </span>
             <span className="block text-[10px] uppercase tracking-[0.16em] text-ink-soft">
               Audio Guide &amp; Digital Map
@@ -43,38 +62,35 @@ export default function Header() {
                 }`
               }
             >
-              {link.label}
+              {t(link.labelKey)}
             </NavLink>
           ))}
         </nav>
 
         {/* Right actions */}
         <div className="hidden items-center gap-3 lg:flex">
-          <button
-            onClick={() => setLang(lang === 'VI' ? 'EN' : 'VI')}
-            className="rounded-full border border-ink/15 px-3 py-1.5 text-xs font-semibold text-ink-soft transition-colors hover:border-maroon hover:text-maroon"
-            aria-label="Đổi ngôn ngữ"
-          >
-            {lang} / {lang === 'VI' ? 'EN' : 'VI'}
-          </button>
+          <LanguageSwitch />
           <NavLink
             to="/tra-cuu-hien-vat"
             className="flex items-center gap-2 rounded-full bg-maroon px-4 py-2 text-sm font-semibold text-cream transition-colors hover:bg-maroon-700"
           >
             <Search size={16} />
-            Tra cứu hiện vật
+            {t('nav.lookup')}
           </NavLink>
         </div>
 
-        {/* Mobile toggle */}
-        <button
-          className="flex h-10 w-10 items-center justify-center rounded-full border border-ink/15 lg:hidden"
-          onClick={() => setOpen((v) => !v)}
-          aria-label="Mở menu"
-          aria-expanded={open}
-        >
-          {open ? <X size={18} /> : <Menu size={18} />}
-        </button>
+        {/* Mobile: nút ngôn ngữ luôn hiện (không cần mở menu) + nút menu */}
+        <div className="flex items-center gap-2 lg:hidden">
+          <LanguageSwitch />
+          <button
+            className="flex h-10 w-10 items-center justify-center rounded-full border border-ink/15"
+            onClick={() => setOpen((v) => !v)}
+            aria-label={t('header.openMenu')}
+            aria-expanded={open}
+          >
+            {open ? <X size={18} /> : <Menu size={18} />}
+          </button>
+        </div>
       </div>
 
       {/* Mobile nav */}
@@ -92,7 +108,7 @@ export default function Header() {
                   }`
                 }
               >
-                {link.label}
+                {t(link.labelKey)}
               </NavLink>
             ))}
             <NavLink
@@ -101,7 +117,7 @@ export default function Header() {
               className="mt-2 flex items-center justify-center gap-2 rounded-full bg-maroon px-4 py-2.5 text-sm font-semibold text-cream"
             >
               <Search size={16} />
-              Tra cứu hiện vật
+              {t('nav.lookup')}
             </NavLink>
           </nav>
         </div>

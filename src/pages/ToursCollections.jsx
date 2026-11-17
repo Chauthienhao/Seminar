@@ -3,6 +3,7 @@ import { NavLink } from 'react-router-dom'
 import { Search, Clock, MapPin, Loader2, ChevronDown } from 'lucide-react'
 
 import { api } from '../lib/api.js'
+import { pick, useLang } from '../lib/i18n.jsx'
 
 export default function ToursCollections() {
   const [query, setQuery] = useState('')
@@ -13,15 +14,25 @@ export default function ToursCollections() {
   const [expandedId, setExpandedId] = useState(null)
   const [stopsByTour, setStopsByTour] = useState({}) // cache: { [tourId]: TourStop[] }
   const [loadingStops, setLoadingStops] = useState(null)
+  const { lang, t } = useLang()
 
-  // GET /api/tours?lang=vi — chỉ cần gọi 1 lần, lọc theo từ khoá làm ngay trên client
+  // GET /api/tours?lang=... — gọi lại khi đổi ngôn ngữ, lọc theo từ khoá làm ngay trên client.
+  // Cache điểm dừng cũng phải xoá vì tên hiện vật trong đó là của ngôn ngữ cũ.
   useEffect(() => {
+    let active = true
+    setLoading(true)
+    setError(null)
+    setStopsByTour({})
+    setExpandedId(null)
     api
-      .listTours('vi')
-      .then(setTours)
-      .catch(() => setError('Không thể kết nối tới máy chủ.'))
-      .finally(() => setLoading(false))
-  }, [])
+      .listTours(lang)
+      .then((list) => active && setTours(list))
+      .catch(() => active && setError(t('common.networkError')))
+      .finally(() => active && setLoading(false))
+    return () => {
+      active = false
+    }
+  }, [lang, t])
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
@@ -39,7 +50,7 @@ export default function ToursCollections() {
       setLoadingStops(tourId)
       try {
         // Chỉ gọi GET /api/tours/{id} (có danh sách điểm dừng) khi người dùng thực sự mở ra xem
-        const detail = await api.getTour(tourId, 'vi')
+        const detail = await api.getTour(tourId, lang)
         setStopsByTour((prev) => ({ ...prev, [tourId]: detail.stops }))
       } catch {
         setStopsByTour((prev) => ({ ...prev, [tourId]: [] }))
@@ -51,10 +62,8 @@ export default function ToursCollections() {
 
   return (
     <section className="mx-auto max-w-content px-4 py-10 sm:px-6 sm:py-14">
-      <h1 className="text-3xl font-semibold sm:text-4xl">Kho tàng tư liệu &amp; Tour tham quan</h1>
-      <p className="mt-2 max-w-lg text-sm text-ink-soft">
-        Khám phá các lộ trình tour tham quan có sẵn của bảo tàng — bấm vào một tour để xem các điểm dừng theo thứ tự.
-      </p>
+      <h1 className="text-3xl font-semibold sm:text-4xl">{t('tours.title')}</h1>
+      <p className="mt-2 max-w-lg text-sm text-ink-soft">{t('tours.desc')}</p>
 
       {/* Search */}
       <div className="mt-6 flex items-center gap-2 rounded-full border border-ink/15 bg-paper px-4 py-2.5 sm:max-w-md">
@@ -63,26 +72,24 @@ export default function ToursCollections() {
           type="text"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Tìm kiếm tour theo tên..."
+          placeholder={t('tours.searchPlaceholder')}
           className="w-full bg-transparent text-sm outline-none placeholder:text-ink-soft/60"
         />
       </div>
 
       {/* Tours */}
       <div className="mt-10">
-        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-maroon">
-          Lộ trình tour có sẵn nổi bật
-        </p>
+        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-maroon">{t('tours.featured')}</p>
 
         {loading && (
           <p className="mt-4 flex items-center justify-center gap-2 py-10 text-sm text-ink-soft">
-            <Loader2 size={16} className="animate-spin" /> Đang tải danh sách tour...
+            <Loader2 size={16} className="animate-spin" /> {t('tours.loading')}
           </p>
         )}
 
         {!loading && error && (
           <p className="mt-4 rounded-2xl border border-dashed border-ink/15 p-8 text-center text-sm text-maroon">
-            {error} Không kết nối được máy chủ, vui lòng thử lại sau.
+            {error} {t('common.serverDown')}
           </p>
         )}
 
@@ -106,9 +113,9 @@ export default function ToursCollections() {
                   <div className="flex-1">
                     <div className="flex items-center gap-3 text-[11px] font-semibold uppercase tracking-wide text-ink-soft">
                       {tour.duration_minutes && (
-                        <span className="flex items-center gap-1"><Clock size={12} /> Thời lượng {tour.duration_minutes} phút</span>
+                        <span className="flex items-center gap-1"><Clock size={12} /> {t('tours.duration', { minutes: tour.duration_minutes })}</span>
                       )}
-                      <span className="flex items-center gap-1"><MapPin size={12} /> {tour.stop_count} điểm dừng</span>
+                      <span className="flex items-center gap-1"><MapPin size={12} /> {t('tours.stops', { count: tour.stop_count })}</span>
                     </div>
                     <h3 className="mt-2 font-serif text-lg font-semibold">{tour.title}</h3>
                     {tour.description && <p className="mt-1.5 text-sm leading-relaxed text-ink-soft">{tour.description}</p>}
@@ -125,11 +132,11 @@ export default function ToursCollections() {
                   <div className="border-t border-ink/10 bg-cream px-5 py-4">
                     {loadingStops === tour.id && (
                       <p className="flex items-center gap-2 text-sm text-ink-soft">
-                        <Loader2 size={14} className="animate-spin" /> Đang tải điểm dừng...
+                        <Loader2 size={14} className="animate-spin" /> {t('tours.loadingStops')}
                       </p>
                     )}
                     {loadingStops !== tour.id && (stopsByTour[tour.id]?.length ?? 0) === 0 && (
-                      <p className="text-sm text-ink-soft">Tour này chưa có điểm dừng nào.</p>
+                      <p className="text-sm text-ink-soft">{t('tours.noStops')}</p>
                     )}
                     {loadingStops !== tour.id && (stopsByTour[tour.id]?.length ?? 0) > 0 && (
                       <ol className="space-y-2">
@@ -147,10 +154,12 @@ export default function ToursCollections() {
                               <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-maroon/10 text-[11px] font-semibold text-maroon">
                                 {step_order}
                               </span>
-                              <span className="font-medium text-ink">{poi.name_vi}</span>
-                              {poi.room && <span className="text-xs text-ink-soft">{poi.room.name_vi}</span>}
+                              <span className="font-medium text-ink">{pick(poi, 'name', lang)}</span>
+                              {poi.room && <span className="text-xs text-ink-soft">{pick(poi.room, 'name', lang)}</span>}
                               {poi.artifacts.length > 1 && (
-                                <span className="text-xs text-ink-soft">· {poi.artifacts.length} hiện vật</span>
+                                <span className="text-xs text-ink-soft">
+                                  · {t('common.artifactCount', { count: poi.artifacts.length })}
+                                </span>
                               )}
                             </NavLink>
                           </li>
@@ -164,7 +173,7 @@ export default function ToursCollections() {
 
             {filtered.length === 0 && (
               <p className="rounded-2xl border border-dashed border-ink/15 p-8 text-center text-sm text-ink-soft">
-                Không tìm thấy tour phù hợp. Hãy thử từ khoá khác.
+                {t('tours.noResults')}
               </p>
             )}
           </div>

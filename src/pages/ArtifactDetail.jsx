@@ -4,6 +4,7 @@ import { Play, Pause, RotateCcw, RotateCw, Heart, Share2, ChevronDown, Loader2 }
 
 import { api, ApiError } from '../lib/api.js'
 import { getSessionId } from '../lib/session.js'
+import { pick, useLang } from '../lib/i18n.jsx'
 
 function formatTime(seconds) {
   if (!Number.isFinite(seconds)) return '0:00'
@@ -16,7 +17,8 @@ export default function ArtifactDetail() {
   const { id } = useParams()
   const [searchParams] = useSearchParams()
   const fromQr = searchParams.get('src') === 'qr'
-  const [lang, setLang] = useState('vi')
+  // Dùng chung ngôn ngữ với nút VI/EN trên Header — đổi ở đâu thì cả site đổi theo
+  const { lang, setLang, t } = useLang()
   const [artifact, setArtifact] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -30,19 +32,27 @@ export default function ArtifactDetail() {
   const [duration, setDuration] = useState(0)
   const hasLoggedPlay = useRef(false)
 
-  // GET /api/artifacts/{id}?lang=vi — gọi lại mỗi khi đổi id (chuyển hiện vật) hoặc đổi ngôn ngữ
+  // GET /api/artifacts/{id}?lang=... — gọi lại mỗi khi đổi id (chuyển hiện vật) hoặc đổi ngôn ngữ.
+  // Audio đang phát sẽ dừng hẳn (trình phát bị gỡ trong lúc tải) để không phát chồng 2 thứ tiếng.
   useEffect(() => {
+    let active = true
+    audioRef.current?.pause()
     setLoading(true)
     setError(null)
     setPlaying(false)
+    setCurrentTime(0)
+    setDuration(0)
     hasLoggedPlay.current = false
     api
       .getArtifact(id, lang)
-      .then(setArtifact)
+      .then((data) => active && setArtifact(data))
       .catch((err) =>
-        setError(err instanceof ApiError && err.status === 404 ? 'not_found' : 'network')
+        active && setError(err instanceof ApiError && err.status === 404 ? 'not_found' : 'network')
       )
-      .finally(() => setLoading(false))
+      .finally(() => active && setLoading(false))
+    return () => {
+      active = false
+    }
   }, [id, lang])
 
   const togglePlay = () => {
@@ -61,7 +71,8 @@ export default function ArtifactDetail() {
             session_id: getSessionId(),
             // ?src=qr do trang /q/:code (link trong mã QR) gắn vào; vào từ tìm kiếm/bản đồ/tour là MANUAL
             trigger_method: fromQr ? 'QR_SCAN' : 'MANUAL',
-            language_played: lang,
+            // Ghi ngôn ngữ THỰC SỰ được phát (backend có thể trả bản VI nếu chưa có bản EN)
+            language_played: artifact.translation.language_code,
           })
           .catch(() => {
             /* Lỗi ghi log không nên chặn trải nghiệm nghe audio của khách */
@@ -85,7 +96,7 @@ export default function ArtifactDetail() {
   if (loading) {
     return (
       <section className="mx-auto flex max-w-content items-center justify-center gap-2 px-4 py-24 text-sm text-ink-soft">
-        <Loader2 size={18} className="animate-spin" /> Đang tải thông tin hiện vật...
+        <Loader2 size={18} className="animate-spin" /> {t('artifact.loading')}
       </section>
     )
   }
@@ -94,21 +105,22 @@ export default function ArtifactDetail() {
     return (
       <section className="mx-auto max-w-content px-4 py-24 text-center">
         <h1 className="text-2xl font-semibold">
-          {error === 'not_found' ? 'Không tìm thấy hiện vật này' : 'Không thể kết nối tới máy chủ'}
+          {error === 'not_found' ? t('artifact.notFoundTitle') : t('artifact.networkTitle')}
         </h1>
         <p className="mt-2 text-sm text-ink-soft">
-          {error === 'not_found'
-            ? 'Mã hiện vật không tồn tại hoặc đã bị gỡ khỏi hệ thống.'
-            : 'Không kết nối được máy chủ, vui lòng thử lại sau.'}
+          {error === 'not_found' ? t('artifact.notFoundDesc') : t('common.serverDown')}
         </p>
         <NavLink to="/tra-cuu-hien-vat" className="mt-6 inline-block text-sm font-semibold text-maroon">
-          ← Quay lại trang Tra cứu hiện vật
+          {t('common.backToLookup')}
         </NavLink>
       </section>
     )
   }
 
   const { translation, room } = artifact
+  const available = artifact.available_languages || []
+  // Backend tự lùi về bản có sẵn khi thiếu bản dịch -> báo cho khách biết vì sao nội dung không đúng ngôn ngữ
+  const showingFallback = translation.language_code !== lang
 
   return (
     <section className="mx-auto max-w-content px-4 py-10 sm:px-6 sm:py-14">
@@ -137,7 +149,8 @@ export default function ArtifactDetail() {
             <div className="flex items-center justify-between">
               <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-maroon">
                 <span className="h-1.5 w-1.5 rounded-full bg-maroon" />
-                Thuyết minh {translation.audio_source === 'tts' ? '(giọng AI tổng hợp)' : '(giọng thu sẵn)'}
+                {t('artifact.narration')}{' '}
+                {translation.audio_source === 'tts' ? t('artifact.sourceTts') : t('artifact.sourceRecorded')}
               </p>
             </div>
 
@@ -158,17 +171,17 @@ export default function ArtifactDetail() {
             </div>
 
             <div className="mt-4 flex items-center justify-center gap-6">
-              <button onClick={() => seek(-10)} className="text-ink-soft transition-colors hover:text-maroon" aria-label="Lùi 10 giây">
+              <button onClick={() => seek(-10)} className="text-ink-soft transition-colors hover:text-maroon" aria-label={t('artifact.rewind')}>
                 <RotateCcw size={20} />
               </button>
               <button
                 onClick={togglePlay}
                 className="flex h-12 w-12 items-center justify-center rounded-full bg-maroon text-cream transition-colors hover:bg-maroon-700"
-                aria-label={playing ? 'Tạm dừng' : 'Phát'}
+                aria-label={playing ? t('artifact.pause') : t('artifact.play')}
               >
                 {playing ? <Pause size={20} /> : <Play size={20} className="ml-0.5" />}
               </button>
-              <button onClick={() => seek(10)} className="text-ink-soft transition-colors hover:text-maroon" aria-label="Tiến 10 giây">
+              <button onClick={() => seek(10)} className="text-ink-soft transition-colors hover:text-maroon" aria-label={t('artifact.forward')}>
                 <RotateCw size={20} />
               </button>
             </div>
@@ -181,11 +194,11 @@ export default function ArtifactDetail() {
                 }`}
               >
                 <Heart size={14} fill={liked ? 'currentColor' : 'none'} />
-                Yêu thích hiện vật
+                {t('artifact.favorite')}
               </button>
               <button className="flex items-center gap-1.5 rounded-full border border-ink/15 px-3.5 py-1.5 text-xs font-semibold text-ink-soft transition-colors hover:border-maroon hover:text-maroon">
                 <Share2 size={14} />
-                Chia sẻ tư liệu
+                {t('artifact.share')}
               </button>
             </div>
           </div>
@@ -199,28 +212,33 @@ export default function ArtifactDetail() {
           </p>
           <h1 className="mt-2 text-3xl font-semibold sm:text-4xl">{translation.title}</h1>
           <p className="mt-2 text-sm text-ink-soft">
-            Vị trí: {artifact.poi.name_vi}
-            {room ? ` — ${room.name_vi}` : ''}
+            {t('artifact.location')}: {pick(artifact.poi, 'name', lang)}
+            {room ? ` — ${pick(room, 'name', lang)}` : ''}
           </p>
 
           <div className="mt-5 flex gap-2">
-            <button
-              onClick={() => setLang('vi')}
-              className={`rounded-full px-4 py-1.5 text-xs font-semibold transition-colors ${
-                lang === 'vi' ? 'bg-navy-800 text-cream' : 'border border-ink/15 text-ink-soft'
-              }`}
-            >
-              Bản tiếng Việt
-            </button>
-            <button
-              onClick={() => setLang('en')}
-              className={`rounded-full px-4 py-1.5 text-xs font-semibold transition-colors ${
-                lang === 'en' ? 'bg-navy-800 text-cream' : 'border border-ink/15 text-ink-soft'
-              }`}
-            >
-              English Version
-            </button>
+            {[
+              { code: 'vi', label: t('artifact.versionVi') },
+              { code: 'en', label: t('artifact.versionEn') },
+            ].map((option) => {
+              const missing = !available.includes(option.code)
+              return (
+                <button
+                  key={option.code}
+                  onClick={() => setLang(option.code)}
+                  className={`rounded-full px-4 py-1.5 text-xs font-semibold transition-colors ${
+                    lang === option.code ? 'bg-navy-800 text-cream' : 'border border-ink/15 text-ink-soft'
+                  } ${missing && lang !== option.code ? 'opacity-50' : ''}`}
+                >
+                  {option.label}
+                </button>
+              )
+            })}
           </div>
+
+          {showingFallback && (
+            <p className="mt-3 rounded-lg bg-sand/60 px-3 py-2 text-xs text-ink-soft">{t('artifact.missingTranslation')}</p>
+          )}
 
           {translation.transcript && (
             <div className="mt-6 rounded-2xl border border-ink/10 bg-paper">
@@ -228,7 +246,7 @@ export default function ArtifactDetail() {
                 onClick={() => setShowTranscript((v) => !v)}
                 className="flex w-full items-center justify-between px-5 py-4 text-left"
               >
-                <span className="text-sm font-semibold text-ink">Toàn văn thuyết minh (Transcript)</span>
+                <span className="text-sm font-semibold text-ink">{t('artifact.transcript')}</span>
                 <ChevronDown
                   size={18}
                   className={`text-ink-soft transition-transform ${showTranscript ? 'rotate-180' : ''}`}

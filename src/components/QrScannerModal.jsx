@@ -3,25 +3,25 @@ import QrScanner from 'qr-scanner'
 import { CameraOff, ImagePlus, Loader2, X } from 'lucide-react'
 
 import { extractQrCode } from '../lib/qrCode.mjs'
+import { useLang } from '../lib/i18n.jsx'
 
-const INVALID_QR = 'Mã QR này không phải mã của bảo tàng.'
-
-function cameraErrorMessage(err) {
+/** Trả về KEY của câu thông báo (dịch lúc hiển thị, để đổi ngôn ngữ khi đang mở cửa sổ vẫn đúng). */
+function cameraErrorKey(err) {
   if (typeof window !== 'undefined' && !window.isSecureContext) {
-    return 'Trình duyệt chỉ cho dùng camera trên trang https hoặc localhost.'
+    return 'scanner.errInsecure'
   }
   const name = err?.name || ''
   const text = String(err?.message || err || '')
   if (name === 'NotAllowedError' || /permission|denied/i.test(text)) {
-    return 'Bạn chưa cho phép website dùng camera. Bấm biểu tượng camera trên thanh địa chỉ để cho phép, rồi mở lại.'
+    return 'scanner.errDenied'
   }
   if (name === 'NotFoundError' || /no camera|not found/i.test(text)) {
-    return 'Không tìm thấy camera trên máy này.'
+    return 'scanner.errNoCamera'
   }
   if (name === 'NotReadableError') {
-    return 'Camera đang được ứng dụng khác sử dụng (Zoom, Teams...). Hãy tắt ứng dụng đó rồi thử lại.'
+    return 'scanner.errBusy'
   }
-  return 'Không mở được camera.'
+  return 'scanner.errGeneric'
 }
 
 /**
@@ -35,6 +35,7 @@ export default function QrScannerModal({ onClose, onDetected }) {
   const doneRef = useRef(false)
   const onDetectedRef = useRef(onDetected)
   onDetectedRef.current = onDetected
+  const { t } = useLang()
 
   const [status, setStatus] = useState('starting') // 'starting' | 'scanning' | 'error' | 'done'
   const [cameraError, setCameraError] = useState(null)
@@ -48,7 +49,7 @@ export default function QrScannerModal({ onClose, onDetected }) {
     if (doneRef.current) return true
     const code = extractQrCode(data)
     if (!code) {
-      setNotice(INVALID_QR)
+      setNotice('qr.invalid')
       return false
     }
     doneRef.current = true
@@ -94,7 +95,7 @@ export default function QrScannerModal({ onClose, onDetected }) {
       })
       .catch((err) => {
         if (!active) return
-        setCameraError(cameraErrorMessage(err))
+        setCameraError(cameraErrorKey(err))
         setStatus('error')
       })
     return () => {
@@ -114,7 +115,7 @@ export default function QrScannerModal({ onClose, onDetected }) {
   const switchCamera = (id) => {
     setCameraId(id)
     scannerRef.current?.setCamera(id).catch((err) => {
-      setCameraError(cameraErrorMessage(err))
+      setCameraError(cameraErrorKey(err))
       setStatus('error')
     })
   }
@@ -127,7 +128,7 @@ export default function QrScannerModal({ onClose, onDetected }) {
       const result = await QrScanner.scanImage(file, { returnDetailedScanResult: true })
       handleData(result.data)
     } catch {
-      setNotice('Không tìm thấy mã QR trong ảnh. Hãy chọn ảnh rõ nét, chụp thẳng mã QR.')
+      setNotice('scanner.noQrInImage')
     } finally {
       setScanningImage(false)
     }
@@ -138,13 +139,13 @@ export default function QrScannerModal({ onClose, onDetected }) {
       className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-navy-900/60 px-4 py-10"
       onMouseDown={(e) => e.target === e.currentTarget && onClose()}
     >
-      <div role="dialog" aria-modal="true" aria-label="Quét mã QR" className="w-full max-w-lg rounded-2xl bg-cream shadow-xl">
+      <div role="dialog" aria-modal="true" aria-label={t('scanner.dialogLabel')} className="w-full max-w-lg rounded-2xl bg-cream shadow-xl">
         <div className="flex items-center justify-between border-b border-ink/10 px-5 py-4">
-          <h2 className="text-lg font-semibold">Quét mã QR hiện vật</h2>
+          <h2 className="text-lg font-semibold">{t('scanner.title')}</h2>
           <button
             type="button"
             onClick={onClose}
-            aria-label="Đóng"
+            aria-label={t('scanner.close')}
             className="flex h-8 w-8 items-center justify-center rounded-full text-ink-soft hover:bg-sand/60 hover:text-ink"
           >
             <X size={18} />
@@ -158,29 +159,29 @@ export default function QrScannerModal({ onClose, onDetected }) {
 
             {status === 'starting' && (
               <p className="absolute inset-0 flex items-center justify-center gap-2 text-sm text-cream/80">
-                <Loader2 size={16} className="animate-spin" /> Đang mở camera...
+                <Loader2 size={16} className="animate-spin" /> {t('scanner.starting')}
               </p>
             )}
             {status === 'error' && (
               <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 px-6 text-center text-sm text-cream/90">
                 <CameraOff size={26} />
-                <p>{cameraError}</p>
+                <p>{cameraError && t(cameraError)}</p>
               </div>
             )}
             {status === 'done' && (
               <p className="absolute inset-0 flex items-center justify-center gap-2 bg-navy-900/70 text-sm text-cream">
-                <Loader2 size={16} className="animate-spin" /> Đã đọc mã, đang mở điểm tham quan...
+                <Loader2 size={16} className="animate-spin" /> {t('scanner.done')}
               </p>
             )}
             {notice && (
               <p role="status" className="absolute inset-x-3 bottom-3 rounded-lg bg-paper/95 px-3 py-2 text-center text-xs font-semibold text-maroon">
-                {notice}
+                {t(notice)}
               </p>
             )}
           </div>
 
           <p className="mt-3 text-sm text-ink-soft">
-            Đưa mã QR dán tại điểm tham quan vào giữa khung hình, giữ yên khoảng 1–2 giây.
+            {t('scanner.hint')}
           </p>
 
           <div className="mt-4 flex flex-wrap items-center gap-2">
@@ -188,22 +189,22 @@ export default function QrScannerModal({ onClose, onDetected }) {
               <select
                 value={cameraId}
                 onChange={(e) => switchCamera(e.target.value)}
-                aria-label="Chọn camera"
+                aria-label={t('scanner.chooseCamera')}
                 className="min-w-0 flex-1 rounded-full border border-ink/15 bg-paper px-4 py-2 text-sm outline-none focus:border-maroon"
               >
                 <option value="" disabled>
-                  Chọn camera...
+                  {t('scanner.chooseCameraPlaceholder')}
                 </option>
                 {cameras.map((c, i) => (
                   <option key={c.id} value={c.id}>
-                    {c.label || `Camera ${i + 1}`}
+                    {c.label || t('scanner.camera', { n: i + 1 })}
                   </option>
                 ))}
               </select>
             )}
             <label className="inline-flex shrink-0 cursor-pointer items-center gap-1.5 rounded-full border border-ink/15 bg-paper px-4 py-2 text-sm font-semibold text-ink transition-colors hover:border-maroon hover:text-maroon">
               {scanningImage ? <Loader2 size={14} className="animate-spin" /> : <ImagePlus size={14} />}
-              Chọn ảnh có mã QR
+              {t('scanner.fromImage')}
               <input
                 type="file"
                 accept="image/*"
@@ -218,7 +219,7 @@ export default function QrScannerModal({ onClose, onDetected }) {
           </div>
 
           <p className="mt-4 text-xs text-ink-soft">
-            Không quét được? Đóng cửa sổ này và nhập mã in dưới mã QR (VD: SG-1822) vào ô tra cứu.
+            {t('scanner.fallback')}
           </p>
         </div>
       </div>
