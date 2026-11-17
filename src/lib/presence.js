@@ -11,7 +11,7 @@ import { useEffect } from 'react'
 import { api } from './api.js'
 
 const DEVICE_KEY = 'museum_device_id'
-const HEARTBEAT_MS = 30_000
+const HEARTBEAT_MS = 10_000
 
 function getDeviceId() {
   try {

@@ -13,7 +13,7 @@ sau tối đa 30 giây. Cách này đủ cho backend chạy 1 tiến trình uvic
 import time
 from threading import Lock
 
-ONLINE_WINDOW_SECONDS = 75   # > 2 lần chu kỳ heartbeat (30s) để không bị nhảy số khi mạng chậm
+ONLINE_WINDOW_SECONDS = 10   # > 2 lần chu kỳ heartbeat (30s) để không bị nhảy số khi mạng chậm
 MAX_TRACKED_DEVICES = 10_000  # chặn việc bị gửi id rác làm đầy bộ nhớ
 
 _last_seen: dict[str, float] = {}
